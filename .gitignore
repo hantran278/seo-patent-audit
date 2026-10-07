@@ -1,0 +1,11 @@
+# dependencies
+node_modules
+
+# secrets: never commit (.env.local, .env.vercel-keys.txt, .env.mcp-tokens.txt, …)
+.env*
+
+# Vercel project link
+.vercel
+
+# audit output + crawl caches (may contain client data)
+reports

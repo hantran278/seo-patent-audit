@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SEO Patent Audit</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1c1c1a;--mute:#6b6b66;--line:#e4e2dc;--accent:#2f5bd3;--accent-ink:#fff;--bad:#c93a2e;--good:#2e8b57;--field:#fbfaf7}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--mute:#9a9992;--line:#2e2e2b;--accent:#7b9cff;--accent-ink:#0d0d0c;--bad:#ff7b6b;--good:#5cc98b;--field:#232321}}
+:root[data-theme=dark]{--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--mute:#9a9992;--line:#2e2e2b;--accent:#7b9cff;--accent-ink:#0d0d0c;--bad:#ff7b6b;--good:#5cc98b;--field:#232321}
+*{box-sizing:border-box}html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:28px 16px 60px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+header h1{font-size:20px;margin:0;flex:1}.who{color:var(--mute);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+label{display:block;font-size:13px;color:var(--mute);margin:14px 0 5px}
+input[type=text],input[type=password],input[type=url],select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink)}
+input[type=file]{font-size:13px;color:var(--mute);max-width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}@media (max-width:640px){.row{grid-template-columns:1fr}}
+button{font:inherit;border:0;border-radius:8px;padding:10px 18px;cursor:pointer}
+.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}.primary:disabled{opacity:.5;cursor:wait}
+.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+.hint{font-size:12.5px;color:var(--mute);margin-top:4px}
+.err{color:var(--bad);font-size:14px;margin-top:10px;min-height:1em}
+#log{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:12px;font:12.5px/1.6 ui-monospace,Consolas,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;margin-top:16px}
+.result{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:18px 0 12px}
+.score{font-size:40px;font-weight:700;line-height:1}
+iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.check{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px}
+.hidden{display:none!important}
+.login{max-width:380px;margin:12vh auto 0}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:16px;text-align:center;background:var(--field);cursor:pointer;font-size:14px}
+.drop.over,.drop:focus-visible{border-color:var(--accent);outline:none}
+.drop u{color:var(--accent)}
+.files{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.files li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;min-width:0}
+.files .nm{flex:1 1 200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.files .kd{font-size:12px;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);white-space:nowrap}
+.files .kd.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.files .n{color:var(--mute);font-size:12px;white-space:nowrap}
+.files button{padding:2px 8px;background:none;color:var(--mute)}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;padding:11px 16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);text-decoration:none;font-weight:600}
+.gbtn:hover{border-color:var(--accent)}
+.linkbtn{background:none;border:0;padding:0;margin-top:14px;color:var(--mute);font-size:13px;text-decoration:underline;cursor:pointer}
+.gbox{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:16px;background:var(--field)}
+.ghead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ghead strong{font-size:14px}.ghead .hint{margin:0;flex:1;min-width:120px}
+a.btn{display:inline-block;text-decoration:none;font-size:14px;border-radius:8px;padding:7px 14px}
+.gbox select{background:var(--panel)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SEO Patent Audit</h1>
+    <span class="who" id="who"></span>
+    <button class="ghost hidden" id="logout">Đăng xuất</button>
+    <button class="ghost" onclick="toggleTheme()" aria-label="Đổi giao diện">◐</button>
+  </header>
+
+  <!-- login -->
+  <div id="loginView" class="card login hidden">
+    <h2 style="margin:0 0 4px;font-size:18px">Đăng nhập</h2>
+    <div class="hint">Công cụ nội bộ. Đăng nhập bằng Google cũng kết nối luôn Search Console và GA4.</div>
+    <a id="gLogin" class="gbtn hidden" href="/api/google?action=start"><svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Đăng nhập bằng Google</a>
+    <button type="button" class="linkbtn hidden" id="pwToggle">Đăng nhập bằng tài khoản nội bộ</button>
+    <div class="hint" style="margin-top:12px"><a href="/privacy.html" style="color:inherit">Chính sách quyền riêng tư</a></div>
+    <form id="loginForm">
+      <label for="u">Tài khoản</label><input id="u" type="text" autocomplete="username" required>
+      <label for="p">Mật khẩu</label><input id="p" type="password" autocomplete="current-password" required>
+      <div class="err" id="loginErr"></div>
+      <button class="primary" style="width:100%;margin-top:8px">Đăng nhập</button>
+    </form>
+  </div>
+
+  <!-- app -->
+  <div id="appView" class="hidden">
+    <form id="auditForm" class="card">
+      <label for="url">Website cần audit</label>
+      <input id="url" type="text" placeholder="https://example.com" required>
+      <div class="row">
+        <div><label for="brand">Tên thương hiệu (cách nhau bằng dấu phẩy)</label><input id="brand" type="text" placeholder="Enosta, Enosta Agency"></div>
+        <div><label for="max">Số URL tối đa</label>
+          <select id="max"><option value="50">50 — nhanh (~1 phút)</option><option value="100">100 (~1–2 phút)</option><option value="200">200 (~2–3 phút)</option><option value="300" selected>300 (~3 phút)</option><option value="500">500 (~4 phút)</option><option value="1000">1.000 — toàn bộ site, nhiều đợt (~8–12 phút)</option><option value="2000">2.000 — toàn bộ site, nhiều đợt (~15–25 phút)</option><option value="5000">5.000 — toàn bộ site, nhiều đợt (~40–60 phút)</option></select>
+          <div class="hint">Site phản hồi chậm có thể dừng sớm hơn số đã chọn (giới hạn ~4,5 phút/lần); log sẽ báo số URL thực tế.</div></div>
+      </div>
+      <div id="gbox" class="gbox hidden">
+        <div class="ghead"><strong>Search Console & GA4</strong> <span class="hint" id="gstate"></span>
+          <a class="ghost btn" id="gconnect" href="/api/google?action=start">Kết nối Google</a>
+          <button type="button" class="ghost hidden" id="gdisconnect">Ngắt kết nối</button></div>
+        <div class="row hidden" id="gprops">
+          <div><label for="gscSite">Property Search Console</label><select id="gscSite"><option value="">— Không dùng —</option></select></div>
+          <div><label for="ga4Property">Property GA4</label><select id="ga4Property"><option value="">— Không dùng —</option></select></div>
+        </div>
+        <div class="hint" id="ghint">Lấy trực tiếp 90 ngày dữ liệu (truy vấn × trang từ GSC, landing page organic từ GA4) bằng tài khoản Google của bạn; không cần export CSV.</div>
+      </div>
+      <label for="files">Dữ liệu bổ sung (không bắt buộc): kéo-thả nhiều file CSV cùng lúc</label>
+      <input id="files" type="file" accept=".csv,.tsv,.txt,text/csv" multiple hidden>
+      <div id="drop" class="drop" tabindex="0" role="button" aria-label="Chọn file CSV">
+        <strong>Kéo file vào đây</strong> hoặc <u>chọn file</u>
+        <div class="hint">Tự nhận diện: Google Search Console (Queries, Pages, Links) · Screaming Frog (internal_all, response codes…) · Semrush (Organic Positions, Backlinks, Referring Domains, Site Audit) · Ahrefs (Organic keywords, Backlinks). Chỉ nhận CSV, không nhận .xlsx.</div>
+        <div class="hint" style="margin-top:6px"><b>Audit backlink:</b> thả file <b>Semrush → Backlink Analytics → Referring Domains</b> (hoặc Backlinks) → báo cáo có tab Backlink: DISAVOW / REVIEW / RECHECK / KEEP, cụm IP, domain mới theo tháng, tải disavow.txt. Thả thêm file backlink của đối thủ để xem link gap.</div>
+      </div>
+      <ul id="fileList" class="files"></ul>
+      <details class="gbox" id="jevBox">
+        <summary class="ghead" style="cursor:pointer"><strong>Phân loại backlink bằng Jev (AI)</strong> <span class="hint" id="jevState">Chưa có API key: dùng quy tắc tự động</span></summary>
+        <div class="row">
+          <div><label for="jevNiche">Ngách của website (viết tiếng Anh, gửi cho Jev)</label><input id="jevNiche" type="text" placeholder="digital agency: web design, SEO, AI development"></div>
+          <div><label for="jevKey">TypeSafe API key</label><input id="jevKey" type="password" autocomplete="off" placeholder="Dán key từ console.typesafe.ai/keys">
+            <label class="check" style="margin-top:6px"><input type="checkbox" id="jevRemember"> Ghi nhớ key trên trình duyệt này (không dùng trên máy chung)</label></div>
+        </div>
+        <div class="row">
+          <div><label for="jevThreshold">Ngưỡng spam để DISAVOW ngay (xác suất)</label><input id="jevThreshold" type="text" value="0.8"></div>
+          <div><label for="jevBudget">Ngưỡng dừng (USD mỗi lần chạy)</label><input id="jevBudget" type="text" value="1"></div>
+        </div>
+        <div class="row" style="align-items:center;margin-top:10px"><div><button type="button" class="ghost" id="jevTest">Gửi 1 request test Jev</button></div><div class="hint" id="jevTestOut"></div></div>
+        <div class="hint" style="margin-top:8px">Chỉ chạy khi có file backlink. Mỗi referring domain = 1 lần gọi với 5 câu hỏi (spam/PBN, loại site, mức liên quan ngách, dấu hiệu thao túng, đề xuất DISAVOW/REVIEW/RECHECK/KEEP); ~$0,04 cho 1.000 domain. Domain Jev chưa kịp phân tích giữ nhãn theo quy tắc. Confidence không phải tỷ lệ chắc chắn đúng.</div>
+      </details>
+      <label class="check"><input type="checkbox" id="psi" checked> Chạy PageSpeed Insights (Core Web Vitals) cho 4 trang mẫu</label>
+      <div class="err" id="auditErr"></div>
+      <button class="primary" id="go" style="margin-top:10px">Chạy audit</button>
+      <div class="hint" style="margin-top:8px">Công cụ đọc HTML thô (không chạy JavaScript), tôn trọng robots.txt. Mỗi lần chạy tối đa ~4,5 phút.</div>
+      <div id="log" class="hidden"></div>
+    </form>
+
+    <div id="resultView" class="hidden">
+      <div class="result">
+        <div><div class="hint">Điểm tổng</div><div class="score" id="score"></div></div>
+        <div style="flex:1"></div>
+        <button class="ghost" id="openTab">Mở báo cáo tab mới</button>
+        <button class="ghost" id="dlHtml">Tải báo cáo HTML</button>
+        <button class="primary" id="dlXlsx">Tải checklist Excel</button>
+      </div>
+      <iframe id="frame" title="Báo cáo audit"></iframe>
+    </div>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+function toggleTheme(){const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){}}
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+
+async function whoami(){
+  const r = await fetch('/api/login').then(r=>r.json()).catch(()=>({}));
+  const on = !!r.user;
+  $('#loginView').classList.toggle('hidden', on); $('#appView').classList.toggle('hidden', !on);
+  $('#logout').classList.toggle('hidden', !on); $('#who').textContent = on ? r.user : '';
+  if (on) { googleStatus(); jevServerKey = !!r.jevServerKey; jevStatus(); } else loginOptions();
+}
+
+// ── Jev (TypeSafe) key: the team key on the server, or the member's own key kept in this page / this browser ──
+let jevServerKey = false;
+try { const k = localStorage.getItem('jevKey'); if (k) { $('#jevKey').value = k; $('#jevRemember').checked = true; } } catch (e) {}
+function jevStatus() {
+  const own = $('#jevKey').value.trim();
+  $('#jevState').textContent = own ? 'Dùng API key của bạn' : jevServerKey ? 'Dùng API key chung của team' : 'Chưa có API key: dùng quy tắc tự động';
+  $('#jevKey').placeholder = jevServerKey ? 'Đã có key chung trên server (dán key riêng nếu muốn)' : 'Dán key từ console.typesafe.ai/keys';
+}
+$('#jevKey').addEventListener('input', () => { jevStatus(); if ($('#jevRemember').checked) try { localStorage.setItem('jevKey', $('#jevKey').value.trim()); } catch (e) {} });
+$('#jevRemember').onchange = (e) => { try { e.target.checked ? localStorage.setItem('jevKey', $('#jevKey').value.trim()) : localStorage.removeItem('jevKey'); } catch (x) {} };
+const jevBody = () => ({ key: $('#jevKey').value.trim(), niche: $('#jevNiche').value.trim(), threshold: parseFloat($('#jevThreshold').value.replace(',', '.')), budget: parseFloat($('#jevBudget').value.replace(',', '.')) });
+$('#jevTest').onclick = async () => {
+  $('#jevTestOut').textContent = 'Đang gửi…';
+  const r = await fetch('/api/jev', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(jevBody()) });
+  const j = await r.json().catch(() => ({}));
+  $('#jevTestOut').textContent = r.ok ? `✓ ${j.model}: domain mẫu "${j.domain}" → ${j.verdict} · spam ${Math.round(j.spam * 100)}% · ${j.inputTokens} token (~$${j.cost.toFixed(5)}) · ${j.ms} ms` : '✗ ' + (j.error || 'Lỗi ' + r.status);
+};
+// Google sign-in is the main way in when the server has it set up; the password form becomes a fallback
+async function loginOptions() {
+  const s = await fetch('/api/google?action=status').then((r) => r.json()).catch(() => ({}));
+  $('#gLogin').classList.toggle('hidden', !s.signIn);
+  $('#pwToggle').classList.toggle('hidden', !s.signIn);
+  $('#loginForm').classList.toggle('hidden', !!s.signIn);
+}
+$('#pwToggle').onclick = () => { $('#loginForm').classList.toggle('hidden'); $('#u').focus(); };
+
+// ── Google (Search Console + GA4) connection of the logged-in member ──
+let gProps = null;
+async function googleStatus() {
+  const s = await fetch('/api/google?action=status').then((r) => r.json()).catch(() => ({}));
+  $('#gbox').classList.toggle('hidden', !s.configured);
+  if (!s.configured) return;
+  $('#gconnect').classList.toggle('hidden', s.connected);
+  $('#gdisconnect').classList.toggle('hidden', !s.connected);
+  $('#gprops').classList.toggle('hidden', !s.connected);
+  $('#gstate').textContent = s.connected ? 'Đã kết nối: ' + (s.email || 'Google') : 'Chưa kết nối';
+  if (s.connected) loadGoogleProps();
+}
+async function loadGoogleProps() {
+  $('#gstate').textContent += ' · đang tải danh sách property…';
+  const r = await fetch('/api/google?action=properties');
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { $('#gstate').textContent = j.error || 'Không tải được property.'; if (j.reauth) googleStatus(); return; }
+  gProps = j;
+  $('#gstate').textContent = 'Đã kết nối: ' + (j.email || 'Google') + ` · ${j.gsc.length} property GSC · ${j.ga4.length} property GA4`;
+  const fill = (sel, items) => { sel.length = 1; for (const it of items) sel.add(new Option(it.name || it, it.id || it)); };
+  fill($('#gscSite'), j.gsc); fill($('#ga4Property'), j.ga4);
+  if (j.errors?.length) $('#ghint').textContent = '⚠ ' + j.errors.join(' · ');
+  matchProps();
+}
+// pick the property matching the URL being audited (sc-domain:x.com, https://x.com/, GA4 name containing the domain)
+function matchProps() {
+  if (!gProps) return;
+  let host = '';
+  try { host = new URL(/^https?:\/\//.test($('#url').value) ? $('#url').value : 'https://' + $('#url').value).host.replace(/^www\./, ''); } catch (e) { return; }
+  if (!host) return;
+  const gsc = gProps.gsc.find((s) => s === 'sc-domain:' + host) || gProps.gsc.find((s) => s.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') === host);
+  if (gsc) $('#gscSite').value = gsc;
+  const root = host.split('.')[0];
+  const ga = gProps.ga4.filter((p) => p.name.toLowerCase().includes(host) || p.name.toLowerCase().includes(root));
+  if (ga.length === 1) $('#ga4Property').value = ga[0].id;
+}
+$('#url').addEventListener('change', matchProps);
+$('#gdisconnect').onclick = async () => { await fetch('/api/google', { method: 'DELETE' }); gProps = null; googleStatus(); };
+$('#loginForm').onsubmit = async (e) => {
+  e.preventDefault(); $('#loginErr').textContent = '';
+  const r = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user: $('#u').value, pass: $('#p').value})});
+  if (!r.ok) { $('#loginErr').textContent = (await r.json().catch(()=>({}))).error || 'Đăng nhập thất bại.'; return; }
+  $('#p').value = ''; whoami();
+};
+$('#logout').onclick = async () => { await fetch('/api/login', {method:'DELETE'}); location.reload(); };
+
+// ── uploaded CSVs: decoded and parsed in the browser, only useful Screaming Frog columns are sent ──
+const deacc = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
+function decode(buf) {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder('utf-16le').decode(b);
+  if (b[0] === 0xfe && b[1] === 0xff) return new TextDecoder('utf-16be').decode(b);
+  return new TextDecoder('utf-8').decode(b);
+}
+function parseCsv(input) {
+  const text = String(input).replace(/^﻿/, '').replace(/^sep=.?\r?\n/i, '');
+  const sample = text.split(/\r?\n/, 5).sort((a, b) => b.length - a.length)[0] || '';
+  const delim = [',', ';', '\t'].sort((a, b) => sample.split(b).length - sample.split(a).length)[0];
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; }
+    else if (c === '"') q = true;
+    else if (c === delim) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); f = ''; if (row.some((x) => x !== '')) rows.push(row); row = []; }
+    else f += c;
+  }
+  row.push(f); if (row.some((x) => x !== '')) rows.push(row);
+  const widest = Math.max(0, ...rows.slice(0, 5).map((r) => r.length));
+  const h = Math.max(0, rows.findIndex((r) => r.length === widest));
+  return { header: (rows[h] || []).map((x) => x.trim()), rows: rows.slice(h + 1) };
+}
+// rough mirror of lib/sources.mjs detect(), only for the label shown before upload
+function kindOf(header) {
+  const d = header.map(deacc), has = (re) => d.some((x) => re.test(x));
+  if (has(/^address$/) && has(/^indexability|^status code$|^crawl depth$|^content type$/)) return 'Screaming Frog';
+  if (has(/click|luot nhap/) && has(/impression|hien thi/)) return 'Search Console';
+  if (has(/^keyword$|^tu khoa$/) && has(/^position$|^current position$|^vi tri$/)) return 'Từ khoá (Semrush/Ahrefs)';
+  if (has(/source url|referring page url|^url nguon|linking site|trang web lien ket|^referring domain$|^domain$/)) return 'Backlink';
+  if (has(/^issue|^van de|^loi$/) || (has(/^page url$|^url$/) && header.length >= 8)) return 'Semrush Site Audit';
+  return '';
+}
+const SF_KEEP = /^(address|content type|status code|indexability|indexability status|title 1|meta description 1|h1-1|h1-2|word count|crawl depth|inlinks|unique inlinks|canonical link element 1|response time|redirect url|meta robots 1)$/;
+const uploads = [];
+async function addFiles(list) {
+  for (const file of list) {
+    if (/\.xlsx?$/i.test(file.name)) { uploads.push({ name: file.name, error: 'File Excel: hãy xuất lại dạng CSV' }); continue; }
+    try {
+      const p = parseCsv(decode(await file.arrayBuffer()));
+      const kind = kindOf(p.header);
+      if (kind === 'Screaming Frog') {   // drop the dozens of columns the audit doesn't use
+        const keep = p.header.map((h, i) => (SF_KEEP.test(deacc(h)) ? i : -1)).filter((i) => i >= 0);
+        p.header = keep.map((i) => p.header[i]); p.rows = p.rows.map((r) => keep.map((i) => r[i] ?? ''));
+      }
+      uploads.push({ name: file.name, kind, ...p });
+    } catch (e) { uploads.push({ name: file.name, error: 'Không đọc được file' }); }
+  }
+  renderFiles();
+}
+function renderFiles() {
+  $('#fileList').innerHTML = '';
+  uploads.forEach((u, i) => {
+    const li = document.createElement('li');
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = u.name;
+    const kd = document.createElement('span'); kd.className = 'kd' + (u.error || !u.kind ? ' bad' : ''); kd.textContent = u.error || u.kind || 'Chưa nhận diện được';
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = u.rows ? u.rows.length.toLocaleString('vi-VN') + ' dòng' : '';
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Bỏ file ' + u.name); x.onclick = () => { uploads.splice(i, 1); renderFiles(); };
+    li.append(nm, kd, n, x); $('#fileList').append(li);
+  });
+}
+// Vercel caps a request body at ~4.5 MB: gzip the files (CSV-like JSON shrinks ~10×),
+// and only if that still doesn't fit, trim rows from the largest file.
+async function gzipB64(str) {
+  const buf = await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function packFiles() {
+  const files = uploads.filter((u) => !u.error && u.kind).map((u) => ({ name: u.name, header: u.header, rows: u.rows }));
+  if (!files.length) return { files, gz: '', truncated: false };
+  for (;;) {
+    const gz = await gzipB64(JSON.stringify(files));
+    if (gz.length < 4_000_000) return { files, gz, truncated: files.some((f) => f.truncated) };
+    const big = files.reduce((a, b) => (b.rows.length > a.rows.length ? b : a));
+    if (big.rows.length < 50) return { files, gz, truncated: true };
+    big.rows = big.rows.slice(0, Math.floor(big.rows.length * 0.7)); big.truncated = true;
+  }
+}
+const drop = $('#drop');
+drop.onclick = () => $('#files').click();
+drop.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#files').click(); } };
+$('#files').onchange = (e) => { addFiles([...e.target.files]); e.target.value = ''; };
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); };
+let last = null;
+$('#auditForm').onsubmit = async (e) => {
+  e.preventDefault();
+  $('#auditErr').textContent = ''; $('#resultView').classList.add('hidden');
+  const log = $('#log'); log.textContent = ''; log.classList.remove('hidden');
+  const go = $('#go'); go.disabled = true; go.textContent = 'Đang chạy…';
+  const t0 = Date.now(); const tick = setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);go.textContent='Đang chạy… '+(s>=120?Math.floor(s/60)+' phút '+(s%60)+'s':s+'s')+(go.dataset.progress?' · '+go.dataset.progress:'')},1000);
+  last = null;
+  const say = (t) => { log.textContent += t + '\n'; log.scrollTop = log.scrollHeight; };
+  // one NDJSON streaming call to /api/audit; resolves with the last 'batch' / 'done' message
+  async function call(body) {
+    const r = await fetch('/api/audit', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    if (r.status === 401) { whoami(); throw new Error('Phiên đăng nhập đã hết, vui lòng đăng nhập lại.'); }
+    if (!r.ok || !r.body) throw new Error((await r.json().catch(()=>({}))).error || 'Lỗi máy chủ ('+r.status+').');
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '', result = null;
+    for (;;) {
+      const {value, done} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream:true});
+      let i; while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue;
+        const m = JSON.parse(line);
+        if (m.type === 'log') say(m.message);
+        else if (m.type === 'error') throw new Error(m.message);
+        else result = m;
+      }
+    }
+    return result;
+  }
+  try {
+    const body = { url: $('#url').value.trim(), brand: $('#brand').value, maxPages: Number($('#max').value), psi: $('#psi').checked, gscSite: $('#gscSite').value, ga4Property: $('#ga4Property').value, jev: jevBody() };
+    // full-site mode: crawl in ~4-minute batches (state kept on the server), then one analysis call
+    if (body.maxPages > 500) {
+      let jobId = '', done = false;
+      while (!done) {
+        let b = null;
+        for (let attempt = 1; attempt <= 3 && !b; attempt++) {
+          try { b = await call({ url: body.url, maxPages: body.maxPages, mode: 'batch', jobId }); }
+          catch (err) { if (attempt === 3 || /đăng nhập|không hợp lệ|Không tìm thấy|chưa được cấu hình/.test(err.message)) throw err; say(`⚠ Đợt crawl lỗi (${err.message}), thử lại lần ${attempt + 1}…`); }
+        }
+        if (!b) throw new Error('Máy chủ ngắt kết nối giữa đợt crawl.');
+        jobId = b.jobId; done = b.done;
+        go.dataset.progress = `đợt ${b.batch} · ${b.crawled}/${b.maxPages} URL`;
+        if (!done) say(`… còn ${b.queued} URL chờ crawl, chạy đợt ${b.batch + 1} (giữ tab này mở)`);
+      }
+      say('▶ Crawl xong toàn bộ, bắt đầu phân tích…');
+      delete go.dataset.progress;
+      body.jobId = jobId;
+    }
+    const packed = await packFiles();
+    if (packed.gz) body.filesGz = packed.gz;
+    if (packed.truncated) say('⚠ Dữ liệu file vượt giới hạn gửi lên kể cả khi đã nén, đã cắt bớt dòng cuối của file lớn nhất.');
+    const m = await call(body);
+    if (!m || m.type !== 'done') throw new Error('Máy chủ ngắt kết nối trước khi xong (có thể do site quá chậm). Thử giảm số URL.');
+    await showResult(m);
+  } catch (err) { $('#auditErr').textContent = err.message; }
+  finally { clearInterval(tick); go.disabled = false; go.textContent = 'Chạy audit'; }
+};
+
+async function showResult(m){
+  last = m;
+  $('#score').textContent = m.score; $('#score').style.color = m.score >= 80 ? 'var(--good)' : m.score >= 60 ? '#c7861a' : 'var(--bad)';
+  const html = m.htmlGz ? await new Response(new Blob([Uint8Array.from(atob(m.htmlGz), c => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : m.html;
+  const htmlBlob = new Blob([html], {type:'text/html'});
+  const htmlUrl = URL.createObjectURL(htmlBlob);
+  $('#frame').src = htmlUrl;
+  const date = new Date().toISOString().slice(0,10);
+  const dl = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); };
+  $('#openTab').onclick = () => window.open(htmlUrl, '_blank');
+  $('#dlHtml').onclick = () => dl(htmlUrl, `${m.host}-${date}.html`);
+  $('#dlXlsx').classList.toggle('hidden', !m.xlsx);
+  if (m.xlsx) {
+    const bin = Uint8Array.from(atob(m.xlsx), c => c.charCodeAt(0));
+    const xUrl = URL.createObjectURL(new Blob([bin], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    $('#dlXlsx').onclick = () => dl(xUrl, `${m.host}-${date} - Enosta Dev_SEO Checklist.xlsx`);
+  }
+  $('#resultView').classList.remove('hidden');
+  $('#resultView').scrollIntoView({behavior:'smooth'});
+}
+whoami();
+</script>
+</body>
+</html>

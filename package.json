@@ -1,0 +1,25 @@
+{
+  "name": "seo-audit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SEO audit grounded in Google patents + Enosta technical checklist (web on Vercel, CLI, MCP)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "audit": "node audit.mjs",
+    "mcp": "node mcp-stdio.mjs",
+    "build:patents": "node build-patents.mjs",
+    "test": "node tests/google-signin-test.mjs && node tests/google-mock-test.mjs && node tests/jev-mock-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "@vercel/blob": "^2.8.1",
+    "cheerio": "^1.2.0",
+    "exceljs": "^4.4.0",
+    "jszip": "^3.10.2",
+    "zod": "^4.6.5"
+  }
+}

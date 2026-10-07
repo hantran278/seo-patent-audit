@@ -2,8 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SRC = process.argv[2] || '../patent-crawler';
-const VAULT_NOTES = 'C:/Users/PC/Documents/Obsidian Vault/Google Patent Research/01 - Core Patents';
+// usage: node build-patents.mjs [đường-dẫn-repo-nghiên-cứu]  (thư mục chứa patent-crawler/ và Google Patent Research/)
+const ROOT = process.argv[2] || process.env.PATENT_RESEARCH_DIR || 'C:/Users/PC/Documents/Obsidian Vault';
+const SRC = path.join(ROOT, 'patent-crawler');
+const VAULT_NOTES = path.join(ROOT, 'Google Patent Research', '01 - Core Patents');
 const load = (dir) => Object.assign({}, ...fs.readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))));
 const vi = load(path.join(SRC, 'data/vi'));
 const an = load(path.join(SRC, 'data/analysis'));

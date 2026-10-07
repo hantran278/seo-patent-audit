@@ -1,6 +1,6 @@
 # SEO Audit theo patent Google
 
-Công cụ audit website dựa trên kho nghiên cứu **262 patent Google** trong Obsidian (`Google Patent Research`). Mỗi phát hiện trong báo cáo đều ghi rõ patent làm căn cứ và mở được note phân tích trong Obsidian.
+Công cụ audit website dựa trên kho nghiên cứu **262 patent Google** trong Obsidian (`Google Patent Research`, repo [seo-patent-research](https://github.com/hantran278/seo-patent-research); cập nhật dữ liệu bằng `node build-patents.mjs "<đường dẫn repo đó>"`). Mỗi phát hiện trong báo cáo đều ghi rõ patent làm căn cứ và mở được note phân tích trong Obsidian.
 
 Web: https://seo-patent-audit.vercel.app (đăng nhập bằng Google, email phải có trong `ALLOWED_EMAILS`).
 Deploy: push lên nhánh `main` của GitHub (`hantran278/seo-patent-audit`) → Vercel tự deploy production; nhánh khác → bản preview.

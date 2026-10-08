@@ -9,3 +9,5 @@ node_modules
 
 # audit output + crawl caches (may contain client data)
 reports
+
+HANDOFF.md

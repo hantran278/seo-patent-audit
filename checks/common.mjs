@@ -9,6 +9,7 @@ export const GROUPS = {
   'query-understanding': { label: 'Ý định & từ khoá (GSC)', priority: 'P2' },
   'entities': { label: 'Thực thể & thương hiệu', priority: 'P2' },
   'page-experience': { label: 'Trải nghiệm trang', priority: 'P2' },
+  'ai-readiness': { label: 'Sẵn sàng cho AI (GEO)', priority: 'P2' },
   'authorship': { label: 'Tác giả & độ tươi', priority: 'P3' },
 };
 

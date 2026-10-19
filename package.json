@@ -11,8 +11,9 @@
     "dev": "node dev-server.mjs",
     "audit": "node audit.mjs",
     "mcp": "node mcp-stdio.mjs",
+    "connector-bridge": "node connector-bridge.mjs",
     "build:patents": "node build-patents.mjs",
-    "test": "node tests/google-signin-test.mjs && node tests/google-mock-test.mjs && node tests/jev-mock-test.mjs"
+    "test": "node tests/google-signin-test.mjs && node tests/google-mock-test.mjs && node tests/jev-mock-test.mjs && node tests/connectors-test.mjs && node tests/geo-test.mjs && node tests/geo-arch-test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.31.0",

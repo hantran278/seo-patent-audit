@@ -66,7 +66,9 @@ export function crawlIndex(site) {
 export function duplicates(site) {
   const out = [];
   const html = site.pages.filter(isHtml200);
-  const indexable = html.filter((p) => !isNoindex(p));
+  // a URL that redirects carries its target's content: it is not a second document, so it must not be paired with
+  // its own target as a duplicate (title, meta or near-duplicate content)
+  const indexable = html.filter((p) => !isNoindex(p) && !(p.chain && p.chain.length));
 
   const variantTargets = new Set(site.variants.filter((v) => v.status === 200).map((v) => v.to));
   const badVariants = site.variants.filter((v) => v.status !== 200 || v.hops > 1);
@@ -109,6 +111,7 @@ export function duplicates(site) {
       const d = hamming(hashed[i].h, hashed[j].h);
       if (d <= 4) pairs.push({ a: hashed[i].p.url, b: hashed[j].p.url, d });
     }
+  site.nearDuplicatePairs = pairs;
   if (pairs.length)
     out.push(issue('duplicates', 'near-duplicates', pairs.length > 10 ? 'high' : 'medium', `${pairs.length} cặp trang có nội dung chính gần trùng lặp`, { why: 'Google gom các trang gần trùng lặp và chỉ index một bản; nội dung template chỉ đổi vài từ (ví dụ tên tỉnh) vẫn bị phát hiện và có thể bị coi là doorway.', fix: 'Gộp các trang (301 + canonical), hoặc viết lại nội dung thực sự khác biệt cho từng trang.', patents: ['US9275143B2', 'US8548972B1', 'US7711679B2', 'US7302645B1'], urls: pairs.map((x) => ({ url: x.a, note: `≈ ${x.b} (khác ${x.d}/64 bit)` })) }));
   return out;

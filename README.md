@@ -161,16 +161,20 @@ CSV từ Ahrefs (Backlinks hoặc Referring domains), Semrush hoặc GSC → Li�
 |---|---|---|
 | Crawl & index (P1) | robots, sitemap (tồn tại, URL không chuẩn, lastmod giả), lỗi 4xx/5xx, chuỗi redirect, trang mồ côi, độ sâu, URL tham số, TTFB, HTML thô gần như rỗng (CSR), bot Google/AI bị chặn hoặc nhận ít nội dung hơn (thử ≤ 16 trang với Googlebot, OAI-SearchBot, ChatGPT-User, GPTBot, ClaudeBot, PerplexityBot), robots.txt chặn bot tìm kiếm/trích dẫn | US9355177, US8554759, US7509315, US8868541 |
 | Trùng lặp & canonical (P1) | biến thể host, canonical thiếu/nhiều/hỏng, title/meta trùng, nội dung gần trùng (simhash) | US8868559, US9275143, US8548972, US7930400 |
-| Chất lượng site (P1) | tỷ lệ trang mỏng, đoạn template lặp, trang tin cậy, lệch chủ đề, tỷ lệ click thương hiệu (GSC) | US9031929, US8682892, US9767157, US8548995 |
+| Chất lượng site (P1) | tỷ lệ trang mỏng, đoạn template lặp, trang tin cậy, lệch chủ đề, tỷ lệ click thương hiệu (GSC), chất lượng không đồng đều theo thư mục, trang thấp hơn chuẩn thư mục (theo NSR trong leak 2024; ngưỡng do tool đặt) | US9031929, US8682892, US9767157, US8548995 |
 | Liên kết (P1) | PageRank nội bộ, trang ít link, anchor chung chung, link ngữ cảnh, link ra sitewide, nofollow trên link nội bộ, cùng anchor trỏ nhiều URL, link điều hướng chỉ bằng JS, backlink | US6285999, US7716225, US10210256, US9002832, US8825645 |
 | Tín hiệu người dùng (P1) | CTR so với kỳ vọng vị trí, ứng viên đẩy top | US8661029, US8938463, US9020927 |
 | Spam (P1) | nhồi từ khoá, văn bản ẩn (CSS inline) | US7603345, US9336279 |
 | Chủ đề & cấu trúc (P2) | H1 (số lượng, độ dài), heading nhảy cấp, bài dài không H2, H1–title–URL khớp entity, danh sách giả | US10068022, US8060501, US9959315 |
-| Ý định & từ khoá (P2) | cannibalization, vị trí 11–20 | US8452766, US9323806 |
+| Ý định & từ khoá (P2) | cannibalization, vị trí 11–20, title lệch query GSC chính | US8452766, US9323806 |
 | Thực thể (P2) | schema Organization, trường thiếu, lỗi JSON-LD, độ phủ schema, thương hiệu trong title, trang About (có/được link/đủ nội dung/sameAs), link mạng xã hội để "#", subdomain rời rạc, site chỉ tiếng Việt chưa có trang tiếng Anh | US8682913, US10331706 |
 | Trải nghiệm trang (P2) | HTTPS, viewport, mixed content, HTML nặng, alt ảnh (thiếu, trùng), charset UTF-8, doctype HTML5 | US20160314215, US8645362 |
 | Sẵn sàng cho AI · GEO (P2) | thẻ <main>/<nav>/<footer>, heading đặt trong header/footer/sidebar, bảng quyền robots.txt theo 14 bot tìm kiếm/AI, heading có ID, bảng/danh sách, đoạn văn dài, số liệu cụ thể và nguồn ngoài (chỉ bài viết), figcaption, VideoObject (bỏ video nền trang trí), sitemap ảnh/video, Speakable (thông tin), llms.txt / llms-full.txt | US8595270, US10180964, US9940367, US7769579, US11900068, US8682913, US8954438 |
 | Tác giả & độ tươi (P3) | thông tin tác giả, ngày đăng/cập nhật trên bài viết | US8150842, US9177074 |
+
+## Bảng quyết định nội dung
+
+Mỗi URL indexable (trừ trang chủ, URL đã redirect) nhận một đề xuất: **Gộp + 301 / Noindex · Xoá + 301 / Xem lại chủ đề / Viết lại / Giữ, sửa title / Giữ**, kèm lý do (gần trùng, tranh query trong GSC, mỏng, thấp hơn chuẩn thư mục, lệch chủ đề). Trang tiện ích và danh mục (liên hệ, chính sách, trang liệt kê nhiều link) không bị xét là "mỏng". Không có GSC thì tool không đề xuất noindex vì không chứng minh được 0 nhu cầu. Xem ở tab "Quyết định nội dung" của báo cáo; tải Excel ở màn hình kết quả (web) hoặc file `… - Quyet dinh noi dung.xlsx` (CLI). Đây là gợi ý để người duyệt, tool không tự gộp, redirect hay noindex.
 
 ## Giới hạn
 

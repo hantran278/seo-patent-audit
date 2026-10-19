@@ -131,6 +131,7 @@ a.btn{display:inline-block;text-decoration:none;font-size:14px;border-radius:8px
         <button class="ghost" id="openTab">Mở báo cáo tab mới</button>
         <button class="ghost" id="dlHtml">Tải báo cáo HTML</button>
         <button class="primary" id="dlXlsx">Tải checklist Excel</button>
+        <button id="dlDecisions">Tải bảng quyết định nội dung</button>
       </div>
       <iframe id="frame" title="Báo cáo audit"></iframe>
     </div>
@@ -385,6 +386,12 @@ async function showResult(m){
     const bin = Uint8Array.from(atob(m.xlsx), c => c.charCodeAt(0));
     const xUrl = URL.createObjectURL(new Blob([bin], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     $('#dlXlsx').onclick = () => dl(xUrl, `${m.host}-${date} - Enosta Dev_SEO Checklist.xlsx`);
+  }
+  $('#dlDecisions').classList.toggle('hidden', !m.decisionsXlsx);
+  if (m.decisionsXlsx) {
+    const bin = Uint8Array.from(atob(m.decisionsXlsx), c => c.charCodeAt(0));
+    const dUrl = URL.createObjectURL(new Blob([bin], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    $('#dlDecisions').onclick = () => dl(dUrl, `${m.host}-${date} - Quyet dinh noi dung.xlsx`);
   }
   $('#resultView').classList.remove('hidden');
   $('#resultView').scrollIntoView({behavior:'smooth'});

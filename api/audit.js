@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     });
     if (jobId) await deleteJob(jobId);
     // reports of big sites are large: ship the HTML gzipped (the page inflates it with DecompressionStream)
-    send({ type: 'done', host: r.site.host, score: r.score.overall, htmlGz: gzipSync(Buffer.from(r.html)).toString('base64'), xlsx: r.xlsx ? r.xlsx.toString('base64') : null });
+    send({ type: 'done', host: r.site.host, score: r.score.overall, htmlGz: gzipSync(Buffer.from(r.html)).toString('base64'), xlsx: r.xlsx ? r.xlsx.toString('base64') : null, decisionsXlsx: r.decisionsXlsx ? r.decisionsXlsx.toString('base64') : null });
   } catch (e) {
     send({ type: 'error', message: e.message });
   }

@@ -50,6 +50,7 @@ export function siteQuality(site) {
     const core = new Set([...dfT.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([w]) => w));
     const off = pageTerms.filter((x) => x.top.filter((w) => core.has(w)).length <= 1);
     site.coreTerms = [...core];
+    site.offTopicPages = off.map((x) => x.p.url);
     if (off.length / pageTerms.length > 0.15)
       out.push(issue('site-quality', 'topic-drift', 'medium', `${off.length} trang (${pct(off.length, pageTerms.length)}%) có chủ đề lệch khỏi trọng tâm của site`, {
         why: 'Google cộng điểm liên quan của cả site vào từng trang và đo mức tập trung chủ đề (siteFocusScore/siteRadius trong leak); nội dung lạc đề làm loãng hồ sơ chủ đề.',

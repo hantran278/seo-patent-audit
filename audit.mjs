@@ -44,8 +44,11 @@ fs.writeFileSync(cacheFile, JSON.stringify(res.site));
 if (res.probes) fs.writeFileSync(probeFile, JSON.stringify(res.probes));
 fs.writeFileSync(out, res.html);
 if (args.includes('--json')) fs.writeFileSync(out.replace(/\.html$/, '.json'), JSON.stringify(res.data, null, 1));
+const decisionsOut = out.replace(/\.html$/, '') + ' - Quyet dinh noi dung.xlsx';
+if (res.decisionsXlsx) fs.writeFileSync(decisionsOut, res.decisionsXlsx);
 
 console.log(`\nĐiểm tổng: ${res.score.overall}/100`);
 for (const g of Object.values(res.score.groups)) console.log(`  ${g.priority} ${g.label.padEnd(30)} ${g.score === null ? '—' : g.score}  (${g.counts.high} cao · ${g.counts.medium} TB · ${g.counts.low} thấp)`);
 console.log(`\n✓ Báo cáo: ${out}`);
 if (checklistFile) console.log(`✓ Checklist đã điền: ${out.replace(/\.html$/, '')} - ${path.basename(checklistFile)}`);
+if (res.decisionsXlsx) console.log(`✓ Bảng quyết định nội dung: ${decisionsOut}`);

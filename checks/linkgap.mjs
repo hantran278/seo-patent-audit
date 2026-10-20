@@ -14,6 +14,9 @@ const MEDIA = /news|times|post\.|daily|journal|magazine|mag\.|wire|press|herald|
 const EDU = /\.edu(\.[a-z]{2})?$|\.ac\.[a-z]{2}$|(^|\.)edu\.[a-z]{2}$|\.gov(\.[a-z]{2})?$|\.mil$|(^|\.)gov\.[a-z]{2}$|ieee\.org|acm\.org|springer|mdpi|sagepub|emerald|liebertpub|cell\.com/;
 
 export const GAP_KINDS = ['Danh bạ / đánh giá B2B', 'Báo chí / PR', 'Giáo dục / tổ chức', 'Blog / site khác'];
+// kind first; inside a kind the niche relevance (Jev, when scored: 3 bands), then how many competitors, then AS
+const band = (r) => (typeof r !== 'number' ? 1 : r >= 0.6 ? 2 : r >= 0.3 ? 1 : 0);
+export const rankGap = (a, b) => GAP_KINDS.indexOf(a.kind) - GAP_KINDS.indexOf(b.kind) || band(b.relevance) - band(a.relevance) || b.shared - a.shared || (b.as ?? 0) - (a.as ?? 0);
 export const kindOf = (d) => (B2B_DIRECTORY.test(d) ? GAP_KINDS[0] : MEDIA.test(d) ? GAP_KINDS[1] : EDU.test(d) ? GAP_KINDS[2] : GAP_KINDS[3]);
 
 // competitors: [[host, [{domain, as, links}]]]; ownSet: domains already linking to us; skip(d): spam / stats sites.
@@ -25,7 +28,6 @@ export function linkGap(competitors, ownSet, { skip = () => false, maxList = 300
   // how many competitors each candidate links to
   const shared = new Map();
   for (const [, ds] of competitors) for (const d of ds) if (!ownSet.has(d.domain)) shared.set(d.domain, (shared.get(d.domain) || 0) + 1);
-  const rank = (a, b) => GAP_KINDS.indexOf(a.kind) - GAP_KINDS.indexOf(b.kind) || b.shared - a.shared || (b.as ?? 0) - (a.as ?? 0);
   const all = new Map();
   const gaps = competitors.map(([host, ds]) => {
     const excluded = {};
@@ -41,9 +43,9 @@ export function linkGap(competitors, ownSet, { skip = () => false, maxList = 300
       y.competitors.push(host);
       all.set(d.domain, y);
     }
-    gap.sort(rank);
+    gap.sort(rankGap);
     return { host, total: ds.length, kept: gap.length, excluded, byKind: Object.fromEntries(GAP_KINDS.map((k) => [k, gap.filter((x) => x.kind === k).length])), gap: gap.slice(0, maxList) };
   });
-  const intersect = [...all.values()].filter((x) => x.competitors.length >= 2).sort(rank).slice(0, maxList);
+  const intersect = [...all.values()].filter((x) => x.competitors.length >= 2).sort(rankGap).slice(0, maxList);
   return { gaps, intersect };
 }

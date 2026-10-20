@@ -115,7 +115,7 @@ a.btn{display:inline-block;text-decoration:none;font-size:14px;border-radius:8px
           <div><label for="jevBudget">Ngưỡng dừng (USD mỗi lần chạy)</label><input id="jevBudget" type="text" value="0.3"></div>
         </div>
         <div class="row" style="align-items:center;margin-top:10px"><div><button type="button" class="ghost" id="jevTest">Gửi 1 request test Jev</button></div><div class="hint" id="jevTestOut"></div></div>
-        <div class="hint" style="margin-top:8px">Chỉ chạy với backlink của chính site (file đối thủ chỉ dùng cho link gap). Mỗi referring domain được chấm riêng với 5 câu hỏi (spam/PBN, loại site, mức liên quan ngách, dấu hiệu thao túng, đề xuất DISAVOW/REVIEW/RECHECK/KEEP), gộp 10 domain mỗi lượt gọi; ~$0,02 cho 1.000 domain. Domain Jev chưa kịp phân tích giữ nhãn theo quy tắc. Confidence không phải tỷ lệ chắc chắn đúng.</div>
+        <div class="hint" style="margin-top:8px">Chỉ chạy với backlink của chính site. Khi có file đối thủ, Jev chấm thêm độ liên quan ngách cho tối đa 200 domain link gap đầu danh sách (~$0,002) để xếp thứ tự tiếp cận. Mỗi referring domain được chấm riêng với 5 câu hỏi (spam/PBN, loại site, mức liên quan ngách, dấu hiệu thao túng, đề xuất DISAVOW/REVIEW/RECHECK/KEEP), gộp 10 domain mỗi lượt gọi; ~$0,02 cho 1.000 domain. Domain Jev chưa kịp phân tích giữ nhãn theo quy tắc. Confidence không phải tỷ lệ chắc chắn đúng.</div>
       </details>
       <label class="check"><input type="checkbox" id="psi" checked> Chạy PageSpeed Insights (Core Web Vitals) cho 4 trang mẫu</label>
       <div class="err" id="auditErr"></div>

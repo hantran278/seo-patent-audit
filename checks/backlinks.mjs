@@ -2,10 +2,12 @@
 // (code only, no AI), then sorts every domain into DISAVOW / REVIEW / RECHECK / KEEP with the reasons behind it,
 // and builds the disavow.txt draft. The verdict step is rule-based; an AI classifier (e.g. Jev) can replace
 // `ruleVerdict` later and receive the same signals.
-import { linkGap } from './linkgap.mjs';
+import { linkGap, rankGap, GAP_KINDS } from './linkgap.mjs';
 import { issue } from './common.mjs';
 import { pct } from '../lib/util.mjs';
-import { jevClassify } from '../lib/jev.mjs';
+import { jevClassify, jevRelevance, JEV_PRICE_IN } from '../lib/jev.mjs';
+
+const GAP_JEV_MAX = 200;   // link-gap domains scored for niche relevance per run (~$0.002)
 
 export const VERDICTS = ['DISAVOW', 'REVIEW', 'RECHECK', 'KEEP'];
 
@@ -125,13 +127,13 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
   for (const d of domains) Object.assign(d, ruleVerdict(d, ctx));
   // optional AI pass (Jev): rule signals become part of the state; unanalysed domains keep the rule verdict
   let jevStats = null;
+  // no niche typed in: describe the site with its homepage title + meta description, so relevance is judged against something
+  const home = site.pages?.find((p) => p.url === site.start) || site.pages?.find((p) => { try { return new URL(p.url).pathname === '/'; } catch { return false; } });
+  const niche = String(jev?.niche || '').trim() || [home?.title, home?.metaDesc].filter(Boolean).join(' · ').slice(0, 300);
+  if (jev?.key && !jev.niche && niche) jev.log?.(`  ngách cho Jev lấy từ trang chủ: "${niche.slice(0, 120)}"`);
   if (jev?.key && domains.length) {
     // ~400 input tokens per domain when batched 10 per request (one domain per request measured ~1,000 on a real 14k-domain run)
     jev.log?.(`▶ Jev phân loại ${domains.length} referring domain của ${site.host} (ước tính ~$${(domains.length * 400 * 0.042 / 1e6).toFixed(3)}, ngưỡng spam ${jev.threshold ?? 0.8}, dừng khi tới $${jev.budget ?? 1})…`);
-    // no niche typed in: describe the site with its homepage title + meta description, so relevance is judged against something
-    const home = site.pages?.find((p) => p.url === site.start) || site.pages?.find((p) => { try { return new URL(p.url).pathname === '/'; } catch { return false; } });
-    const niche = String(jev.niche || '').trim() || [home?.title, home?.metaDesc].filter(Boolean).join(' · ').slice(0, 300);
-    if (!jev.niche && niche) jev.log?.(`  ngách cho Jev lấy từ trang chủ: "${niche.slice(0, 120)}"`);
     jevStats = await jevClassify(domains, { ...ctx, host: site.host, brand: site.brand || [], niche }, jev);
   }
   domains.sort((a, b) => VERDICTS.indexOf(a.verdict) - VERDICTS.indexOf(b.verdict) || b.score - a.score);
@@ -140,7 +142,32 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
 
   // link gap: domains linking to a competitor but not to us
   const ownSet = new Set(domains.map((d) => d.domain));
-  const { gaps, intersect } = linkGap(competitors.map(([host, rs]) => [host, groupDomains(rs)]), ownSet, { skip: (d) => SPAM_NAME.test(d) || STAT_SITE.test(d) });
+  const { gaps, intersect } = linkGap(competitors.map(([host, rs]) => [host, groupDomains(rs)]), ownSet, { skip: (d) => SPAM_NAME.test(d) || STAT_SITE.test(d), maxList: Infinity });
+  // Jev: niche relevance + site type for the head of the list (shared prospects first, then each competitor's top),
+  // from what is left of the budget; spam / scraper / parked sites it spots are dropped, the rest re-ranked
+  let gapJev = null;
+  if (jev?.key && jevStats?.stoppedBy !== 'auth' && intersect.length + gaps.length) {
+    const pick = new Map();
+    for (const x of [...intersect, ...gaps.flatMap((g) => g.gap.slice(0, 60))]) if (pick.size < GAP_JEV_MAX && !pick.has(x.domain)) pick.set(x.domain, { domain: x.domain, as: x.as, kind: x.kind });
+    const left = (jev.budget ?? 1) - (jevStats?.cost || 0);
+    if (left > 0 && Date.now() < (jev.deadline ?? Infinity)) {
+      jev.log?.(`▶ Jev chấm độ liên quan ngách cho ${pick.size} domain link gap (ước tính ~$${(pick.size * 150 * JEV_PRICE_IN).toFixed(4)})…`);
+      gapJev = await jevRelevance([...pick.values()], { host: site.host, niche }, { key: jev.key, budget: Math.min(left, 0.05), deadline: jev.deadline, log: jev.log });
+      const BAD = new Set(['stats_scraper', 'gambling_adult_pharma', 'parked_expired']);
+      const tag = (x) => { const s = pick.get(x.domain); if (s && typeof s.relevance === 'number') { x.relevance = s.relevance; x.siteType = s.siteType; } return x; };
+      const bad = (x) => BAD.has(x.siteType);
+      for (const g of gaps) {
+        g.gap.forEach(tag);
+        const drop = g.gap.filter(bad).length;
+        if (drop) { g.excluded['Jev: spam / site tự sinh / bỏ hoang'] = drop; g.gap = g.gap.filter((x) => !bad(x)); g.kept -= drop; for (const k of GAP_KINDS) g.byKind[k] = g.gap.filter((x) => x.kind === k).length; }
+        g.gap.sort(rankGap);
+      }
+      intersect.forEach(tag);
+      intersect.splice(0, intersect.length, ...intersect.filter((x) => !bad(x)).sort(rankGap));
+    }
+  }
+  for (const g of gaps) g.gap = g.gap.slice(0, 300);
+  intersect.splice(300);
 
   site.backlinkReport = {
     method: jevStats?.analysed ? 'jev' : 'rules', jev: jevStats, domains: domains.length, rows: mine.length, counts,
@@ -148,7 +175,7 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
     clusters: net.clusters.slice(0, 30), months: net.months, spikes: net.spikes,
     list: domains.slice(0, 3000).map((d) => ({ domain: d.domain, as: d.as, links: d.links, ip: d.ip, country: d.country, first: d.firstSeen, last: d.lastSeen, verdict: d.verdict, why: d.why, jev: !!d.jev })),
     disavowTxt: [`# ${site.host} · ${today.toISOString().slice(0, 10)} · ${disavow.length} domain đề xuất DISAVOW (${jevStats?.analysed ? `Jev ${jevStats.analysed} domain + quy tắc` : 'phân loại theo quy tắc'})`, '# RÀ SOÁT THỦ CÔNG TRƯỚC KHI UPLOAD lên Google Disavow Tool. Chỉ disavow khi có dấu hiệu link thao túng hoặc đã bị Manual Action.', ...disavow.map((d) => 'domain:' + d.domain)].join('\n'),
-    gaps, intersect,
+    gaps, intersect, gapJev,
   };
 
   if (disavow.length)
@@ -186,7 +213,7 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
       why: 'Link sâu tới trang dịch vụ/bài viết giúp PageRank và ngữ cảnh anchor tới đúng trang cần xếp hạng.',
       fix: 'Khi xây link/PR, ưu tiên trỏ tới trang dịch vụ, bài chuyên môn, nghiên cứu.', patents: ['US7716225B1', 'US6285999B1'], metric: toHome, total: withTarget }));
 
-  const gapNote = (d) => `${d.kind} · AS/DR ${d.as ?? '—'}${d.competitors ? ' · link tới ' + d.competitors.join(', ') : d.shared > 1 ? ` · link tới ${d.shared} đối thủ` : ''}`;
+  const gapNote = (d) => `${d.kind}${typeof d.relevance === 'number' ? ` · liên quan ngách ${Math.round(d.relevance * 100)}%` : ''} · AS/DR ${d.as ?? '—'}${d.competitors ? ' · link tới ' + d.competitors.join(', ') : d.shared > 1 ? ` · link tới ${d.shared} đối thủ` : ''}`;
   const excludedText = (ex) => Object.entries(ex).map(([k, n]) => `${n} ${k}`).join(', ');
   const gapFix = 'Làm theo thứ tự: (1) danh bạ / đánh giá B2B: tạo hoặc hoàn thiện hồ sơ, xin review khách hàng; (2) báo chí / PR: pitch câu chuyện, số liệu, chuyên gia; (3) giáo dục / tổ chức: hội thảo, tài trợ, nghiên cứu chung; (4) blog / site khác: xem từng site có cùng ngành không trước khi tiếp cận. Ưu tiên domain đã link tới nhiều đối thủ: họ đã có thói quen link tới công ty cùng ngành.';
   if (intersect.length)

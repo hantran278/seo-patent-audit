@@ -99,3 +99,26 @@ const r = { start: O + '/', origin: O, host: 'ex.com', brand: [], pages: [pg('/'
 nsrChecks(r, []);
 assert.deepEqual(r.contentDecisions.map((x) => x.url), [O + '/works']);
 console.log('PASS NSR: redirected URLs ignored');
+
+// run log tab: present, script still valid, progress regex and newline escapes survive the template
+const html2 = renderReport({
+  meta: { date: 'x', patentCount: 0, vault: '', version: 1, web: true }, site: { url: O, host: 'ex.com', crawled: 1, indexable: 1, sitemapCount: 0, brand: [] },
+  sources: [], ga4: null, backlinks: null, score: { overall: 80, groups: {} }, groups: {}, issues: [], patents: {}, pages: [], gsc: null, checklist: null, contentDecisions: [],
+  runLog: [{ t: 1000, m: 'ℹ Đầu vào: thương hiệu "Enosta"' }, { t: 2000, m: '  crawled 50 pages…' }, { t: 65000, m: '⚠ GA4: quota' }],
+});
+for (const m of html2.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
+assert.match(html2, /Nhật ký chạy/);
+assert.ok(html2.includes(String.raw`/^\s*crawled \d+ pages/`), 'regex escapes kept in the output');
+assert.ok(html2.includes(String.raw`.join('\n')`), 'newline escape kept in the output');
+console.log('PASS run log tab');
+
+// competitor referring-domain exports (no target column) are recognised from the file name
+import { classifyFiles } from '../lib/sources.mjs';
+const hdr = ['Domain', 'Domain rating', 'Dofollow links'];
+const imp = classifyFiles([
+  { name: 'andersenlab.com-backlinks_refdomains.csv', header: hdr, rows: [['a.com', '50', '3']] },
+  { name: 'www.enosta.com_refdomains.csv', header: hdr, rows: [['b.com', '40', '1']] },
+  { name: 'backlinks.csv', header: hdr, rows: [['c.com', '30', '1']] },
+]);
+assert.deepEqual(imp.backlinks.map((r) => r.site || ''), ['andersenlab.com', 'enosta.com', '']);
+console.log('PASS backlink files: competitor site taken from the file name');

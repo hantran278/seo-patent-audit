@@ -153,6 +153,8 @@ Gợi ý khi chat: để `max_pages` ≤ 60 cho nhanh; dùng `check_page` để 
 
 ## Backlink
 
+File referring domains không có cột URL đích: đặt tên file bắt đầu bằng tên miền (vd. `andersenlab.com-backlinks_refdomains.csv`) để tool biết đó là backlink của đối thủ (chỉ dùng cho link gap, không đưa vào Jev). File không có tên miền ở đầu được coi là backlink của site đang audit.
+
 CSV từ Ahrefs (Backlinks hoặc Referring domains), Semrush hoặc GSC → Liên kết. Công cụ tự nhận cột: URL/domain nguồn, anchor, DR, traffic, IP → phân tích tỷ lệ link kém, link không traffic, cụm cùng IP (mạng vệ tinh), anchor bị tối ưu quá mức.
 
 ## Các module
@@ -175,6 +177,10 @@ CSV từ Ahrefs (Backlinks hoặc Referring domains), Semrush hoặc GSC → Li�
 ## Bảng quyết định nội dung
 
 Mỗi URL indexable (trừ trang chủ, URL đã redirect) nhận một đề xuất: **Gộp + 301 / Noindex · Xoá + 301 / Xem lại chủ đề / Viết lại / Giữ, sửa title / Giữ**, kèm lý do (gần trùng, tranh query trong GSC, mỏng, thấp hơn chuẩn thư mục, lệch chủ đề). Trang tiện ích và danh mục (liên hệ, chính sách, trang liệt kê nhiều link) không bị xét là "mỏng". Không có GSC thì tool không đề xuất noindex vì không chứng minh được 0 nhu cầu. Xem ở tab "Quyết định nội dung" của báo cáo; tải Excel ở màn hình kết quả (web) hoặc file `… - Quyet dinh noi dung.xlsx` (CLI). Đây là gợi ý để người duyệt, tool không tự gộp, redirect hay noindex.
+
+## Nhật ký chạy
+
+Mỗi báo cáo có tab "Nhật ký chạy": toàn bộ log của lần chạy (cả các đợt crawl), đầu vào đã dùng (thương hiệu, GSC, GA4, Jev bật/tắt, file tải lên; không ghi email hay key) và thời gian từng bước. Log trên Vercel (gói Hobby) chỉ giữ khoảng 30 phút, nên gửi file báo cáo khi cần xem lại một lần chạy.
 
 ## Giới hạn
 

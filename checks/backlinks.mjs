@@ -109,7 +109,7 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
   const own = bare(site.host);
   // split own backlinks from competitor files (target URL on another host)
   const byTarget = new Map();
-  for (const r of rows) { const t = r.target ? hostOf(r.target) : own; const k = t === own || t.endsWith('.' + own) ? own : t; byTarget.set(k, [...(byTarget.get(k) || []), r]); }
+  for (const r of rows) { const t = r.target ? hostOf(r.target) : r.site ? bare(r.site) : own; const k = t === own || t.endsWith('.' + own) ? own : t; byTarget.set(k, [...(byTarget.get(k) || []), r]); }
   const mine = byTarget.get(own) || [];
   const competitors = [...byTarget.entries()].filter(([k]) => k !== own);
 

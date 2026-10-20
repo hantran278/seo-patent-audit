@@ -26,7 +26,9 @@ const out = opt('out', path.join(here, 'reports', `${host}-${new Date().toISOStr
 fs.mkdirSync(path.dirname(out), { recursive: true });
 
 const checklistFile = args.includes('--no-checklist') ? null : opt('checklist', DEFAULT_CHECKLIST);
+const runLog = [];
 const res = await runAudit({
+  runLog, log: (m) => { runLog.push([Date.now(), String(m)]); console.log(m); },
   url,
   brand: opt('brand', '').split(',').map((s) => s.trim()).filter(Boolean),
   maxPages: Number(opt('max', 300)), delay: Number(opt('delay', 250)), concurrency: Number(opt('concurrency', 4)),

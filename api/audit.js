@@ -33,7 +33,9 @@ export default async function handler(req, res) {
 
   res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' });
   const send = (o) => res.write(JSON.stringify(o) + '\n');
-  const log = (m) => send({ type: 'log', message: m });
+  // every line also goes into the run log embedded in the report (batch lines are kept with the crawl job)
+  const runLog = [];
+  const log = (m) => { if (runLog.length < 3000) runLog.push([Date.now(), String(m)]); send({ type: 'log', message: m }); };
   const deadline = Date.now() + 270 * 1000;
   console.log(`[audit] ${user} → ${start}${mode ? ' (' + mode + ')' : ''}${jobId ? ' job ' + jobId.slice(0, 8) : ''}`);
   try {
@@ -51,8 +53,10 @@ export default async function handler(req, res) {
       job.batches++;
       log(`▶ Đợt ${job.batches}: crawl tiếp từ ${job.state.pages.length} URL (mục tiêu tối đa ${job.maxPages})…`);
       const step = await crawlStep(job.state, { maxPages: job.maxPages, concurrency: 8, delay: 100, log, deadline: Date.now() + (Number(process.env.BATCH_SECONDS) || 215) * 1000 });   // BATCH_SECONDS: shorter batches for local tests
+      log(`✓ Đợt ${job.batches}: ${step.crawled} URL · còn ${step.queued} URL trong hàng đợi`);
+      job.log = [...(job.log || []), ...runLog].slice(-3000);
       const size = await saveJob(id, job);
-      log(`✓ Đợt ${job.batches}: ${step.crawled} URL · còn ${step.queued} URL trong hàng đợi · lưu ${Math.round(size / 1024)} KB`);
+      log(`  (đã lưu trạng thái crawl: ${Math.round(size / 1024)} KB)`);
       send({ type: 'batch', jobId: id, batch: job.batches, crawled: step.crawled, queued: step.queued, done: step.done, maxPages: job.maxPages });
       return res.end();
     }
@@ -62,6 +66,7 @@ export default async function handler(req, res) {
     if (jobId) {
       const job = await loadJob(jobId);
       if (!job || job.owner !== user) throw new Error('Không tìm thấy dữ liệu crawl của đợt này (có thể đã hết hạn). Hãy chạy lại.');
+      runLog.unshift(...(job.log || []));
       cachedSite = finishCrawl(job.state);
       log(`✓ Đã gộp ${job.batches} đợt crawl: ${cachedSite.pages.length} URL`);
     }
@@ -77,6 +82,9 @@ export default async function handler(req, res) {
       ...(gscLive.length ? [{ name: gscSite, kind: 'gsc', label: 'Search Console (API, 90 ngày)', rows: gscLive.length }] : []),
       ...(ga4Live.length ? [{ name: ga4Property, kind: 'ga4', label: 'GA4 organic (API, 90 ngày)', rows: ga4Live.length }] : []),
     ];
+    // inputs of this run (no e-mail, no keys) so the report shows what it was based on
+    const jevIn = req.body?.jev || {};
+    log(`ℹ Đầu vào: thương hiệu "${String(brand).trim() || '—'}" · GSC: ${gscSite || (gscCsv ? 'file CSV' : 'không dùng')} · GA4: ${ga4Property || 'không dùng'} · Jev: ${(jevIn.key || process.env.JEV_API_KEY) ? `bật (ngách: ${String(jevIn.niche || '').slice(0, 80) || 'không ghi'})` : 'tắt'} · file tải lên: ${(Array.isArray(files) && files.length) ? files.map((f) => f.name).join(', ') : 'không có'} · PageSpeed: ${psi && process.env.PSI_KEY ? 'bật' : 'tắt'}`);
     const r = await runAudit({
       url: start, site: cachedSite,
       brand: String(brand).split(',').map((s) => s.trim()).filter(Boolean),
@@ -93,7 +101,7 @@ export default async function handler(req, res) {
       backlinkRows: backlinksCsv ? parseCsvText(backlinksCsv) : [],
       files: Array.isArray(files) ? files.slice(0, 20) : [],
       psi: !!psi && !!process.env.PSI_KEY, psiKey: process.env.PSI_KEY || '',
-      log,
+      log, runLog,
     });
     if (jobId) await deleteJob(jobId);
     // reports of big sites are large: ship the HTML gzipped (the page inflates it with DecompressionStream)

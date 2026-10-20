@@ -115,7 +115,7 @@ a.btn{display:inline-block;text-decoration:none;font-size:14px;border-radius:8px
           <div><label for="jevBudget">Ngưỡng dừng (USD mỗi lần chạy)</label><input id="jevBudget" type="text" value="0.3"></div>
         </div>
         <div class="row" style="align-items:center;margin-top:10px"><div><button type="button" class="ghost" id="jevTest">Gửi 1 request test Jev</button></div><div class="hint" id="jevTestOut"></div></div>
-        <div class="hint" style="margin-top:8px">Chỉ chạy khi có file backlink. Mỗi referring domain = 1 lần gọi với 5 câu hỏi (spam/PBN, loại site, mức liên quan ngách, dấu hiệu thao túng, đề xuất DISAVOW/REVIEW/RECHECK/KEEP); ~$0,04 cho 1.000 domain. Domain Jev chưa kịp phân tích giữ nhãn theo quy tắc. Confidence không phải tỷ lệ chắc chắn đúng.</div>
+        <div class="hint" style="margin-top:8px">Chỉ chạy với backlink của chính site (file đối thủ chỉ dùng cho link gap). Mỗi referring domain được chấm riêng với 5 câu hỏi (spam/PBN, loại site, mức liên quan ngách, dấu hiệu thao túng, đề xuất DISAVOW/REVIEW/RECHECK/KEEP), gộp 10 domain mỗi lượt gọi; ~$0,02 cho 1.000 domain. Domain Jev chưa kịp phân tích giữ nhãn theo quy tắc. Confidence không phải tỷ lệ chắc chắn đúng.</div>
       </details>
       <label class="check"><input type="checkbox" id="psi" checked> Chạy PageSpeed Insights (Core Web Vitals) cho 4 trang mẫu</label>
       <div class="err" id="auditErr"></div>
@@ -255,6 +255,7 @@ function kindOf(header) {
   if (has(/click|luot nhap/) && has(/impression|hien thi/)) return 'Search Console';
   if (has(/^keyword$|^tu khoa$/) && has(/^position$|^current position$|^vi tri$/)) return 'Từ khoá (Semrush/Ahrefs)';
   if (has(/source url|referring page url|^url nguon|linking site|trang web lien ket|^referring domain$|^domain$/)) return 'Backlink';
+  if (has(/^site$|^trang web$/) && has(/linking pages|trang lien ket/)) return 'Backlink (GSC)';
   if (has(/^issue|^van de|^loi$/) || (has(/^page url$|^url$/) && header.length >= 8)) return 'Semrush Site Audit';
   return '';
 }
@@ -280,7 +281,7 @@ function renderFiles() {
   uploads.forEach((u, i) => {
     const li = document.createElement('li');
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = u.name;
-    const kd = document.createElement('span'); kd.className = 'kd' + (u.error || !u.kind ? ' bad' : ''); kd.textContent = u.error || u.kind || 'Chưa nhận diện được';
+    const kd = document.createElement('span'); kd.className = 'kd' + (u.error || !u.kind ? ' bad' : ''); kd.textContent = u.error || u.kind || 'Chưa nhận diện (server sẽ kiểm tra lại)';
     const n = document.createElement('span'); n.className = 'n'; n.textContent = u.rows ? u.rows.length.toLocaleString('vi-VN') + ' dòng' : '';
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Bỏ file ' + u.name); x.onclick = () => { uploads.splice(i, 1); renderFiles(); };
     li.append(nm, kd, n, x); $('#fileList').append(li);
@@ -295,7 +296,8 @@ async function gzipB64(str) {
   return btoa(s);
 }
 async function packFiles() {
-  const files = uploads.filter((u) => !u.error && u.kind).map((u) => ({ name: u.name, header: u.header, rows: u.rows }));
+  // send every readable file: the server's detector (lib/sources.mjs) is the authority, the label here is only a preview
+  const files = uploads.filter((u) => !u.error).map((u) => ({ name: u.name, header: u.header, rows: u.rows }));
   if (!files.length) return { files, gz: '', truncated: false };
   for (;;) {
     const gz = await gzipB64(JSON.stringify(files));

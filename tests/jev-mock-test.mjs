@@ -19,7 +19,7 @@ globalThis.fetch = async (url, opt = {}) => {
       answers['d' + k + '_relevance'] = { type: 'score', score: spammy ? 0 : 2, confidence: 0.8, probabilities: {} };
       answers['d' + k + '_verdict'] = { type: 'choice', choice: spammy ? 'DISAVOW' : unsure ? 'REVIEW' : 'KEEP', confidence: unsure ? 0.3 : 0.85, probabilities: {} };
       // link-gap relevance pass (g<k>_ questions): "book" domains are on-niche, "spam" ones are scrapers
-      answers['g' + k + '_relevance'] = { type: 'score', score: /book|read|novel/.test(d.domain) ? 0.9 : 0.1, confidence: 0.7, probabilities: {} };
+      answers['g' + k + '_relevance'] = { type: 'score', score: /book|read|novel/.test(d.domain) ? 1.8 : 0.2, confidence: 0.7, probabilities: {} };
       answers['g' + k + '_site_type'] = { type: 'choice', choice: /spam|seo|stat/.test(d.domain) ? 'stats_scraper' : 'blog', confidence: 0.7, probabilities: {} };
     });
     if (s.task.startsWith('Link-building')) gapCalls++;

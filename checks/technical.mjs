@@ -140,3 +140,20 @@ export function pageExperience(site) {
   out.push(issue('page-experience', 'cwv-manual', 'info', 'Cần kiểm tra Core Web Vitals bằng dữ liệu thật (GSC → Chỉ số thiết yếu về trang web)', { why: 'Google dùng thời gian tải đo từ người dùng thật (field data), không phải điểm Lighthouse. Công cụ crawl không đo được dữ liệu này.', fix: 'Xem báo cáo CWV trong GSC hoặc PageSpeed Insights (phần "Dữ liệu thực tế"); ưu tiên nhóm URL "Kém" có traffic lớn.', patents: ['US8645362B1'], metric: 0 }));
   return out;
 }
+
+// PageSpeed Insights results: Lighthouse that cannot score a page usually could not find the LCP element at all
+export function psiChecks(probes, site) {
+  const out = [];
+  const runs = (probes?.psi || []).filter((x) => !x.error);
+  const noScore = runs.filter((x) => x.lab?.error);
+  if (!noScore.length) return out;
+  const byUrl = new Map(site.pages.map((p) => [p.url, p]));
+  const anim = noScore.map((x) => byUrl.get(x.url)?.revealOnLoad || 0);
+  out.push(issue('page-experience', 'psi-no-score', 'medium', `PageSpeed (Lighthouse) không chấm được điểm Performance cho ${noScore.length}/${runs.length} trang mẫu`, {
+    why: 'Lighthouse không chấm được điểm thường do không tìm thấy phần tử LCP: nội dung màn hình đầu bị ẩn (opacity 0 / visibility hidden) cho tới khi JavaScript chạy hiệu ứng xuất hiện. Người dùng thật cũng phải chờ JS mới thấy nội dung, và Google không đo được LCP từ lab.'
+      + (anim.some((n) => n) ? ` Các trang này có ${Math.max(...anim)} phần tử dùng hiệu ứng xuất hiện bằng JS (Elementor "entrance animation", AOS, WOW…).` : ''),
+    fix: 'Tắt hiệu ứng xuất hiện (entrance animation) cho phần đầu trang, nhất là tiêu đề và ảnh hero; với Elementor: Advanced → Motion Effects → Entrance Animation = None cho các khối above-the-fold. Sau đó chạy lại PageSpeed để có điểm và LCP.',
+    patents: ['US8645362B1'],
+    urls: noScore.map((x, i) => ({ url: x.url, note: `${x.lab.error}${anim[i] ? ` · ${anim[i]} phần tử ẩn chờ hiệu ứng JS` : ''}` })) }));
+  return out;
+}

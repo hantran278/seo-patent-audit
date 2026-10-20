@@ -142,8 +142,13 @@ const tp = trafficPagesBroken({ pages: [
   { url: 'https://ex.com/about-us', status: 200, type: 'text/html', title: 'A', chain: [] },
   { url: 'https://ex.com/about-us/', status: 200, type: 'text/html', title: 'A', chain: [{ url: 'https://ex.com/about-us/', status: 301 }], finalUrl: 'https://ex.com/about-us', redirectVariant: true },
   { url: 'https://ex.com/old', status: 200, type: 'text/html', title: 'B', chain: [{ url: 'https://ex.com/old', status: 301 }], finalUrl: 'https://ex.com/new' },
-] }, { gsc: [{ page: 'https://ex.com/about-us', clicks: 20 }, { page: 'https://ex.com/old', clicks: 5 }], sf: [{ url: 'https://ex.com/about-us/', status: 301 }] });
-assert.deepEqual(tp[0].urls.map((u) => u.url), ['https://ex.com/old']);
+  { url: 'https://ex.com/promo', status: 200, type: 'text/html', title: 'H', chain: [{ url: 'https://ex.com/promo', status: 301 }], finalUrl: 'https://ex.com/' },
+  { url: 'https://ex.com/gone', status: 404, type: 'text/html', chain: [] },
+] }, { gsc: [{ page: 'https://ex.com/about-us', clicks: 20 }, { page: 'https://ex.com/old', clicks: 5 }, { page: 'https://ex.com/promo', clicks: 3 }, { page: 'https://ex.com/gone', clicks: 1 }], sf: [{ url: 'https://ex.com/about-us/', status: 301 }] });
+// one 301 to a real page is the fix itself; redirect to the homepage and a 404 are problems
+assert.deepEqual(tp[0].urls.map((u) => u.url), ['https://ex.com/promo', 'https://ex.com/gone']);
+assert.equal(tp[0].severity, 'medium', 'fewer than 5 clicks at stake');
+assert.match(tp[0].why, /Không tính 1 URL/);
 // collapsed FAQ answers are not hidden text; a page without a mobile alternate has none
 const faqPage = extract(`<html><head><title>t</title></head><body><div class="faq-item"><div class="toggle-content" style="display: none;">${'A real answer that is collapsed until the question is clicked. '.repeat(2)}</div></div><div style="display:none">${'Stuffed keywords cheap software agency best software agency '.repeat(2)}</div></body></html>`, 'https://ex.com/p');
 assert.equal(faqPage.hidden.length, 1);
@@ -184,3 +189,13 @@ const gapHtml = renderReport({
 });
 for (const m of gapHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
 console.log('PASS link gap: exclusions, kinds, intersect, report');
+
+// PageSpeed without a Performance score (no LCP found) becomes an issue, with the JS entrance animations counted
+import { psiChecks } from '../checks/technical.mjs';
+const animPage = extract('<html><body><section class="elementor-element elementor-invisible"><h1>Hero</h1></section><div data-aos="fade-up">x</div></body></html>', 'https://ex.com/');
+assert.equal(animPage.revealOnLoad, 2);
+const psiIss = psiChecks({ psi: [{ url: 'https://ex.com/', lab: { perf: null, error: 'NO_SCORE' } }, { url: 'https://ex.com/b', lab: { perf: 85, error: null } }] }, { pages: [{ url: 'https://ex.com/', revealOnLoad: 2 }] });
+assert.equal(psiIss[0].id, 'psi-no-score');
+assert.match(psiIss[0].urls[0].note, /2 phần tử/);
+assert.equal(psiChecks({ psi: [{ url: 'https://ex.com/b', lab: { perf: 85, error: null } }] }, { pages: [] }).length, 0);
+console.log('PASS PageSpeed without a score: issue with entrance animations');

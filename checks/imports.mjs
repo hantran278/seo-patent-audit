@@ -113,19 +113,26 @@ export function trafficPagesBroken(site, { keywords = [], gsc = [], ga4 = [], sf
   for (const g of gsc) add(g.page, g.clicks);
   for (const g of ga4) add(`https://${g.host}${g.path}`, g.sessions);
   if (!rankTraffic.size) return out;
-  const crawlState = (p) => p.status !== 200 ? `HTTP ${p.status || 'lỗi'}` : p.chain?.length ? `HTTP ${p.chain[0].status}` : !isIndexable(p) ? (/noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác') : null;
-  const sfState = (r) => r.status && r.status !== 200 ? `HTTP ${r.status}` : r.indexable === false ? r.reason || 'Non-Indexable' : null;
+  // a single 301 to a real page is the fix itself (old URL, slash/http variant): Google moves the ranking over, so
+  // it is only counted. Problems: errors, noindex, canonical elsewhere, redirect chains, redirects to an error or to the homepage.
+  const isHome = (u) => { try { return new URL(u).pathname === '/'; } catch { return false; } };
+  const redirectState = (u, target, hops, finalStatus) => finalStatus && finalStatus !== 200 ? `redirect tới URL lỗi (${finalStatus})` : hops >= 2 ? `chuỗi ${hops} redirect` : target && isHome(target) && !isHome(u) ? 'redirect về trang chủ (soft 404)' : 'moved';
+  const crawlState = (p) => p.chain?.length ? redirectState(p.url, p.finalUrl, p.chain.length, p.status || 'lỗi') : p.status !== 200 ? `HTTP ${p.status || 'lỗi'}` : !isIndexable(p) ? (/noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác') : null;
+  const sfState = (r) => r.status >= 300 && r.status < 400 ? redirectState(r.url, r.redirect, 1, null) : r.status && r.status !== 200 ? `HTTP ${r.status}` : r.indexable === false ? r.reason || 'Non-Indexable' : null;
   const index = (list, key) => { const m = new Map(); for (const x of list) if (!m.has(key(x.url))) m.set(key(x.url), x); return m; };
   const crawlExact = index(site.pages, exact), crawlNorm = index(site.pages, norm), sfExact = index(sf, exact), sfNorm = index(sf, norm);
   const problems = new Map();
+  let moved = 0;
   for (const u of rankTraffic.keys()) {
     // the exact URL wins; a slash variant is only used when neither source fetched the exact URL
     const state = crawlExact.has(u) ? crawlState(crawlExact.get(u)) : sfExact.has(u) ? sfState(sfExact.get(u))
       : crawlNorm.has(norm(u)) ? crawlState(crawlNorm.get(norm(u))) : sfNorm.has(norm(u)) ? sfState(sfNorm.get(norm(u))) : null;
-    if (state) problems.set(u, state);
+    if (state === 'moved') moved++;
+    else if (state) problems.set(u, state);
   }
+  const lost = [...problems.keys()].reduce((a, u) => a + rankTraffic.get(u), 0);
   if (problems.size)
-    out.push(issue('crawl-index', 'ranking-pages-broken', 'high', `${problems.size} URL đang có thứ hạng/traffic nhưng bị lỗi, redirect hoặc không indexable`, { why: 'Trang đang mang traffic mà bị lỗi hoặc chặn index sẽ mất thứ hạng ở lần crawl kế tiếp.', fix: 'Ưu tiên sửa ngay: trả về 200, gỡ noindex hoặc canonical sai; nếu đã gộp trang thì redirect 301 về trang thay thế gần nhất.', patents: ['US7725452B1', 'US8868559B2'], urls: [...problems.entries()].sort((a, b) => rankTraffic.get(b[0]) - rankTraffic.get(a[0])).map(([u, why]) => ({ url: u, note: `${why} · ~${Math.round(rankTraffic.get(u)).toLocaleString('vi-VN')} click/phiên` })) }));
+    out.push(issue('crawl-index', 'ranking-pages-broken', lost >= 5 ? 'high' : 'medium', `${problems.size} URL đang có thứ hạng/traffic nhưng bị lỗi, không indexable hoặc redirect sai`, { why: `Trang đang mang traffic mà bị lỗi hoặc chặn index sẽ mất thứ hạng ở lần crawl kế tiếp; chuỗi redirect và redirect về trang chủ làm thất thoát tín hiệu.${moved ? ` Không tính ${moved} URL đã redirect 301 một bước về trang đúng (URL cũ, biến thể có/không dấu / hoặc http): đó là cách xử lý đúng, Google sẽ tự chuyển thứ hạng.` : ''}`, fix: 'Ưu tiên sửa ngay: trả về 200, gỡ noindex hoặc canonical sai; redirect 301 thẳng một bước về trang thay thế liên quan nhất (không về trang chủ).', patents: ['US7725452B1', 'US8868559B2'], urls: [...problems.entries()].sort((a, b) => rankTraffic.get(b[0]) - rankTraffic.get(a[0])).map(([u, why]) => ({ url: u, note: `${why} · ~${Math.round(rankTraffic.get(u)).toLocaleString('vi-VN')} click/phiên` })) }));
   return out;
 }
 

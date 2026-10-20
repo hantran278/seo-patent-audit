@@ -81,9 +81,9 @@ a.btn{display:inline-block;text-decoration:none;font-size:14px;border-radius:8px
       <input id="url" type="text" placeholder="https://example.com" required>
       <div class="row">
         <div><label for="brand">Tên thương hiệu (cách nhau bằng dấu phẩy)</label><input id="brand" type="text" placeholder="Enosta, Enosta Agency"></div>
-        <div><label for="max">Số URL tối đa</label>
-          <select id="max"><option value="50">50 — nhanh (~1 phút)</option><option value="100">100 (~1–2 phút)</option><option value="200">200 (~2–3 phút)</option><option value="300" selected>300 (~3 phút)</option><option value="500">500 (~4 phút)</option><option value="1000">1.000 — toàn bộ site, nhiều đợt (~8–12 phút)</option><option value="2000">2.000 — toàn bộ site, nhiều đợt (~15–25 phút)</option><option value="5000">5.000 — toàn bộ site, nhiều đợt (~40–60 phút)</option></select>
-          <div class="hint">Site phản hồi chậm có thể dừng sớm hơn số đã chọn (giới hạn ~4,5 phút/lần); log sẽ báo số URL thực tế.</div></div>
+        <div><label>Phạm vi crawl</label>
+          <input type="hidden" id="max" value="5000">
+          <div class="hint" style="margin-top:6px"><strong>Toàn bộ site</strong>: theo link nội bộ và sitemap, tối đa 5.000 URL, chạy nhiều đợt (giữ tab này mở). Thời gian tuỳ quy mô: khoảng 2–3 phút cho site 100 trang, 10–15 phút cho 1.000 trang.</div></div>
       </div>
       <div id="gbox" class="gbox hidden">
         <div class="ghead"><strong>Search Console & GA4</strong> <span class="hint" id="gstate"></span>
@@ -343,7 +343,8 @@ $('#auditForm').onsubmit = async (e) => {
   try {
     const body = { url: $('#url').value.trim(), brand: $('#brand').value, maxPages: Number($('#max').value), psi: $('#psi').checked, gscSite: $('#gscSite').value, ga4Property: $('#ga4Property').value, jev: jevBody() };
     // full-site mode: crawl in ~4-minute batches (state kept on the server), then one analysis call
-    if (body.maxPages > 500) {
+    // always the whole site: crawl in ~4-minute batches (state kept on the server) until links and sitemap are exhausted
+    {
       let jobId = '', done = false;
       while (!done) {
         let b = null;
@@ -353,7 +354,7 @@ $('#auditForm').onsubmit = async (e) => {
         }
         if (!b) throw new Error('Máy chủ ngắt kết nối giữa đợt crawl.');
         jobId = b.jobId; done = b.done;
-        go.dataset.progress = `đợt ${b.batch} · ${b.crawled}/${b.maxPages} URL`;
+        go.dataset.progress = `đợt ${b.batch} · đã crawl ${b.crawled} URL`;
         if (!done) say(`… còn ${b.queued} URL chờ crawl, chạy đợt ${b.batch + 1} (giữ tab này mở)`);
       }
       say('▶ Crawl xong toàn bộ, bắt đầu phân tích…');
@@ -364,7 +365,7 @@ $('#auditForm').onsubmit = async (e) => {
     if (packed.gz) body.filesGz = packed.gz;
     if (packed.truncated) say('⚠ Dữ liệu file vượt giới hạn gửi lên kể cả khi đã nén, đã cắt bớt dòng cuối của file lớn nhất.');
     const m = await call(body);
-    if (!m || m.type !== 'done') throw new Error('Máy chủ ngắt kết nối trước khi xong (có thể do site quá chậm). Thử giảm số URL.');
+    if (!m || m.type !== 'done') throw new Error('Máy chủ ngắt kết nối trước khi xong (có thể do site quá chậm). Hãy thử chạy lại.');
     await showResult(m);
   } catch (err) { $('#auditErr').textContent = err.message; }
   finally { clearInterval(tick); go.disabled = false; go.textContent = 'Chạy audit'; }

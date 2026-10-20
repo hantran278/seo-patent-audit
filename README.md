@@ -89,7 +89,7 @@ Trên web, file được đọc và nén gzip ngay trong trình duyệt (Screami
 
 ## Crawl toàn bộ site (nhiều đợt)
 
-Chọn 1.000 / 2.000 / 5.000 URL ở ô "Số URL tối đa": trình duyệt gọi `/api/audit` với `mode: "batch"` nhiều lần, mỗi đợt crawl ~3,5 phút; trạng thái crawl (hàng đợi + dữ liệu trang, nén gzip, ~1 KB/trang) lưu trong Vercel Blob **private** `seo-audit-crawl` (`crawl-jobs/<id>.json.gz`, biến `BLOB_READ_WRITE_TOKEN`). Khi hàng đợi hết hoặc đủ số URL, lệnh cuối gửi `jobId` để gộp và phân tích như audit thường, rồi xoá dữ liệu tạm; job bỏ dở tự xoá sau 24 giờ. Phải giữ tab mở trong lúc chạy; đợt lỗi mạng tự thử lại 2 lần. Code: `initCrawl / crawlStep / finishCrawl` trong `lib/crawler.mjs`, `lib/jobs.mjs`.
+Bản web luôn crawl toàn bộ site (theo link nội bộ và sitemap, tối đa 5.000 URL), không cần chọn số URL; site nhỏ xong trong 1 đợt. Trình duyệt gọi `/api/audit` với `mode: "batch"` nhiều lần, mỗi đợt crawl ~3,5 phút; trạng thái crawl (hàng đợi + dữ liệu trang, nén gzip, ~1 KB/trang) lưu trong Vercel Blob **private** `seo-audit-crawl` (`crawl-jobs/<id>.json.gz`, biến `BLOB_READ_WRITE_TOKEN`). Khi hàng đợi hết hoặc đủ số URL, lệnh cuối gửi `jobId` để gộp và phân tích như audit thường, rồi xoá dữ liệu tạm; job bỏ dở tự xoá sau 24 giờ. Phải giữ tab mở trong lúc chạy; đợt lỗi mạng tự thử lại 2 lần. Code: `initCrawl / crawlStep / finishCrawl` trong `lib/crawler.mjs`, `lib/jobs.mjs`.
 
 ## Đăng nhập bằng Google
 

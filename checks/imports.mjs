@@ -105,23 +105,24 @@ export function keywordChecks(rows, site) {
 export function trafficPagesBroken(site, { keywords = [], gsc = [], ga4 = [], sf = [] }) {
   const out = [];
   const rankTraffic = new Map();
-  const add = (u, v) => { if (u) rankTraffic.set(norm(u), (rankTraffic.get(norm(u)) || 0) + v); };
+  // keyed by the exact URL: "/about-us" (200) and "/about-us/" (301 → /about-us) are different URLs, so a
+  // trailing-slash variant that redirects must not mark the ranking URL itself as redirected
+  const exact = (u) => String(u || '').replace(/#.*$/, '');
+  const add = (u, v) => { if (u) rankTraffic.set(exact(u), (rankTraffic.get(exact(u)) || 0) + v); };
   for (const r of keywords) add(r.url, r.traffic || r.volume / 100);
   for (const g of gsc) add(g.page, g.clicks);
   for (const g of ga4) add(`https://${g.host}${g.path}`, g.sessions);
   if (!rankTraffic.size) return out;
+  const crawlState = (p) => p.status !== 200 ? `HTTP ${p.status || 'lỗi'}` : p.chain?.length ? `HTTP ${p.chain[0].status}` : !isIndexable(p) ? (/noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác') : null;
+  const sfState = (r) => r.status && r.status !== 200 ? `HTTP ${r.status}` : r.indexable === false ? r.reason || 'Non-Indexable' : null;
+  const index = (list, key) => { const m = new Map(); for (const x of list) if (!m.has(key(x.url))) m.set(key(x.url), x); return m; };
+  const crawlExact = index(site.pages, exact), crawlNorm = index(site.pages, norm), sfExact = index(sf, exact), sfNorm = index(sf, norm);
   const problems = new Map();
-  for (const p of site.pages) {
-    const u = norm(p.url);
-    if (!rankTraffic.has(u)) continue;
-    if (p.status !== 200) problems.set(u, `HTTP ${p.status || 'lỗi'}`);
-    else if (!isIndexable(p)) problems.set(u, /noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác');
-  }
-  for (const r of sf) {
-    const u = norm(r.url);
-    if (!rankTraffic.has(u) || problems.has(u)) continue;
-    if (r.status && r.status !== 200) problems.set(u, `HTTP ${r.status}`);
-    else if (r.indexable === false) problems.set(u, r.reason || 'Non-Indexable');
+  for (const u of rankTraffic.keys()) {
+    // the exact URL wins; a slash variant is only used when neither source fetched the exact URL
+    const state = crawlExact.has(u) ? crawlState(crawlExact.get(u)) : sfExact.has(u) ? sfState(sfExact.get(u))
+      : crawlNorm.has(norm(u)) ? crawlState(crawlNorm.get(norm(u))) : sfNorm.has(norm(u)) ? sfState(sfNorm.get(norm(u))) : null;
+    if (state) problems.set(u, state);
   }
   if (problems.size)
     out.push(issue('crawl-index', 'ranking-pages-broken', 'high', `${problems.size} URL đang có thứ hạng/traffic nhưng bị lỗi, redirect hoặc không indexable`, { why: 'Trang đang mang traffic mà bị lỗi hoặc chặn index sẽ mất thứ hạng ở lần crawl kế tiếp.', fix: 'Ưu tiên sửa ngay: trả về 200, gỡ noindex hoặc canonical sai; nếu đã gộp trang thì redirect 301 về trang thay thế gần nhất.', patents: ['US7725452B1', 'US8868559B2'], urls: [...problems.entries()].sort((a, b) => rankTraffic.get(b[0]) - rankTraffic.get(a[0])).map(([u, why]) => ({ url: u, note: `${why} · ~${Math.round(rankTraffic.get(u)).toLocaleString('vi-VN')} click/phiên` })) }));

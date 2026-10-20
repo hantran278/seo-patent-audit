@@ -30,7 +30,7 @@ function gscByPage(gsc) {
 
 // Utility and listing pages (contact, legal, hubs that mostly list links) are short by design: they are not held
 // to the article standard for "thin" and "below folder standard".
-const UTILITY = /\/(contact|contact-us|lien-he|privacy|privacy-policy|terms|terms-of-service|cookie|cookies|chinh-sach|dieu-khoan|sitemap|login|cart|checkout|thank-you|cam-on)(\/|$)|\/(page|tag|category|author)\/|\/page\/\d+/i;
+const UTILITY = /\/(contact|contact-us|lien-he|privacy(?:-[a-z-]+)?|terms(?:-[a-z-]+)?|cookies?(?:-[a-z-]+)?|legal|disclaimer|refund-policy|chinh-sach|dieu-khoan|sitemap|login|cart|checkout|thank-you|cam-on)(\/|$)|\/(page|tag|category|author)\/|\/page\/\d+/i;
 export function isUtility(p) {
   const internalMain = (p.links || []).filter((l) => l.main && /^https?:/.test(l.href)).length;
   return UTILITY.test(p.url) || (p.words < 400 && internalMain >= 12);

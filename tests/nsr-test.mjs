@@ -130,3 +130,24 @@ const gscLinks = classifyFiles([
 assert.deepEqual(gscLinks.summary.map((s) => s.kind), ['backlinks', 'backlinks']);
 assert.deepEqual(gscLinks.backlinks.map((r) => [r.source, r.links, r.site || '']), [['krowdbase.com', 885, 'enosta.com'], ['goodfirms.co', 183, '']]);
 console.log('PASS GSC top linking sites export detected');
+
+// fixes found on the enosta.com report of 2026-10-20
+import { ownBacklinks } from '../lib/run.mjs';
+import { trafficPagesBroken } from '../checks/imports.mjs';
+import { extract } from '../lib/extract.mjs';
+// competitor referring domains (site from the file name) stay out of the own-profile checks
+assert.deepEqual(ownBacklinks([{ source: 'a.com', target: '', site: 'andersenlab.com' }, { source: 'b.com', target: '', site: 'enosta.com' }, { source: 'c.com', target: '' }, { source: 'd.com', target: 'https://scnsoft.com/x' }], 'enosta.com').map((r) => r.source), ['b.com', 'c.com']);
+// "/about-us" (200) ranks; "/about-us/" redirects to it: the ranking URL is not reported as a 301
+const tp = trafficPagesBroken({ pages: [
+  { url: 'https://ex.com/about-us', status: 200, type: 'text/html', title: 'A', chain: [] },
+  { url: 'https://ex.com/about-us/', status: 200, type: 'text/html', title: 'A', chain: [{ url: 'https://ex.com/about-us/', status: 301 }], finalUrl: 'https://ex.com/about-us', redirectVariant: true },
+  { url: 'https://ex.com/old', status: 200, type: 'text/html', title: 'B', chain: [{ url: 'https://ex.com/old', status: 301 }], finalUrl: 'https://ex.com/new' },
+] }, { gsc: [{ page: 'https://ex.com/about-us', clicks: 20 }, { page: 'https://ex.com/old', clicks: 5 }], sf: [{ url: 'https://ex.com/about-us/', status: 301 }] });
+assert.deepEqual(tp[0].urls.map((u) => u.url), ['https://ex.com/old']);
+// collapsed FAQ answers are not hidden text; a page without a mobile alternate has none
+const faqPage = extract(`<html><head><title>t</title></head><body><div class="faq-item"><div class="toggle-content" style="display: none;">${'A real answer that is collapsed until the question is clicked. '.repeat(2)}</div></div><div style="display:none">${'Stuffed keywords cheap software agency best software agency '.repeat(2)}</div></body></html>`, 'https://ex.com/p');
+assert.equal(faqPage.hidden.length, 1);
+assert.match(faqPage.hidden[0], /Stuffed/);
+assert.equal(faqPage.mobileAlternate, null);
+assert.equal(extract(`<html><body><figure><figcaption style="font-size: 0.85em">${'A caption under an image in the article body text. '.repeat(2)}</figcaption></figure></body></html>`, 'https://ex.com/q').hidden.length, 0, 'small font is not hidden');
+console.log('PASS enosta report fixes: own backlinks, slash variants, FAQ toggles, mobile alternate');

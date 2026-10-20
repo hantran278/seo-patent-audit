@@ -3,6 +3,7 @@ import { issue, isHtml200, isIndexable } from './common.mjs';
 import { tokenize, STOP, pct } from '../lib/util.mjs';
 
 const deaccent = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+const LEGAL = /\/(privacy|terms|cookies?|legal|disclaimer|refund|chinh-sach|dieu-khoan)[-a-z]*(\/|$)/i;
 const terms = (t) => tokenize(t).filter((w) => !STOP.has(w) && w.length > 2);
 
 export function siteQuality(site) {
@@ -103,7 +104,8 @@ export function spam(site) {
   const out = [];
   const pages = site.pages.filter(isHtml200);
   const stuffed = [];
-  for (const p of pages) {
+  // legal pages repeat their defined terms ("personal data", "these terms") by nature
+  for (const p of pages.filter((x) => !LEGAL.test(x.url))) {
     const w = terms(p.mainText);
     if (w.length < 200) continue;
     const tf = new Map();
@@ -113,7 +115,10 @@ export function spam(site) {
     const [t1, c1] = [...tf.entries()].sort((a, b) => b[1] - a[1])[0];
     const [t2, c2] = [...bi.entries()].sort((a, b) => b[1] - a[1])[0] || ['', 0];
     const share = c1 / w.length, share2 = c2 / (w.length - 1);
-    if (share > 0.06 || share2 > 0.03) stuffed.push({ url: p.url, note: share2 > 0.03 ? `"${t2}" ${c2} lần (${(share2 * 100).toFixed(1)}%)` : `"${t1}" ${c1} lần (${(share * 100).toFixed(1)}%)` });
+    // the page's own topic (a word of its title/H1) recurs naturally: "brand" on a branding page needs a higher bar
+    const topic = new Set(terms([p.title, ...(p.h1 || [])].join(' ')));
+    const lim1 = topic.has(t1) ? 0.1 : 0.06, lim2 = t2.split(' ').every((x) => topic.has(x)) ? 0.05 : 0.03;
+    if (share > lim1 || share2 > lim2) stuffed.push({ url: p.url, note: share2 > lim2 ? `"${t2}" ${c2} lần (${(share2 * 100).toFixed(1)}%)` : `"${t1}" ${c1} lần (${(share * 100).toFixed(1)}%)` });
   }
   if (stuffed.length)
     out.push(issue('spam', 'keyword-stuffing', stuffed.length > 5 ? 'high' : 'medium', `${stuffed.length} trang có dấu hiệu nhồi từ khoá (một từ/cụm chiếm tỷ lệ bất thường)`, { why: 'Google phát hiện spam khi số lần xuất hiện của từ/cụm liên quan vượt xa mức kỳ vọng (keywordStuffingScore trong leak).', fix: 'Viết lại tự nhiên: dùng đồng nghĩa, đại từ, thuật ngữ liên quan thay vì lặp một cụm.', patents: ['US7603345B2', 'US8752184B1'], urls: stuffed }));

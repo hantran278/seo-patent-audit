@@ -18,6 +18,6 @@ export function issue(group, id, severity, title, { why = '', fix = '', patents 
   return { group, id, severity, title, why, fix, patents, urls: urls.slice(0, 500), count: urls.length || (metric ?? 0), total, metric };
 }
 
-export const isHtml200 = (p) => p.status === 200 && (p.type || '').includes('html') && p.title !== undefined;
+export const isHtml200 = (p) => p.status === 200 && (p.type || '').includes('html') && p.title !== undefined && !p.redirectVariant;
 export const isNoindex = (p) => /noindex/.test(p.robotsMeta || '') || /noindex/i.test(p.xRobots || '');
 export const isIndexable = (p) => isHtml200(p) && !isNoindex(p) && (!p.canonical || p.canonical === p.finalUrl || p.canonical === p.url);

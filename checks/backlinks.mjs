@@ -127,7 +127,11 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
   if (jev?.key && domains.length) {
     // ~400 input tokens per domain when batched 10 per request (one domain per request measured ~1,000 on a real 14k-domain run)
     jev.log?.(`▶ Jev phân loại ${domains.length} referring domain của ${site.host} (ước tính ~$${(domains.length * 400 * 0.042 / 1e6).toFixed(3)}, ngưỡng spam ${jev.threshold ?? 0.8}, dừng khi tới $${jev.budget ?? 1})…`);
-    jevStats = await jevClassify(domains, { ...ctx, host: site.host, brand: site.brand || [], niche: jev.niche }, jev);
+    // no niche typed in: describe the site with its homepage title + meta description, so relevance is judged against something
+    const home = site.pages?.find((p) => p.url === site.start) || site.pages?.find((p) => { try { return new URL(p.url).pathname === '/'; } catch { return false; } });
+    const niche = String(jev.niche || '').trim() || [home?.title, home?.metaDesc].filter(Boolean).join(' · ').slice(0, 300);
+    if (!jev.niche && niche) jev.log?.(`  ngách cho Jev lấy từ trang chủ: "${niche.slice(0, 120)}"`);
+    jevStats = await jevClassify(domains, { ...ctx, host: site.host, brand: site.brand || [], niche }, jev);
   }
   domains.sort((a, b) => VERDICTS.indexOf(a.verdict) - VERDICTS.indexOf(b.verdict) || b.score - a.score);
   const counts = Object.fromEntries(VERDICTS.map((v) => [v, domains.filter((d) => d.verdict === v).length]));

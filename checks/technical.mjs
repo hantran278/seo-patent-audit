@@ -45,9 +45,12 @@ export function crawlIndex(site) {
       out.push(issue('crawl-index', 'fake-lastmod', 'medium', `${pct(top[1], lastmods.length)}% URL trong sitemap có cùng lastmod (${top[0]})`, { why: 'Google chỉ tin lastmod khi nó phản ánh thay đổi thật ở nội dung chính; lastmod đồng loạt bị bỏ qua.', fix: 'Cấu hình lastmod = ngày nội dung chính thay đổi thật.', patents: ['US9355177B2', 'US8868541B2'], metric: top[1], total: lastmods.length }));
   }
 
-  const orphans = P.filter((p) => p.inSitemap && !p.inlinks.length && isHtml200(p));
+  // orphan = sitemap URL not reachable from the start page by following links (crawled in the orphan phase, depth null).
+  // Orphans often link to each other (related posts), so "no inlink at all" undercounts them.
+  const orphans = P.filter((p) => p.inSitemap && p.depth === null && isHtml200(p));
+  const zero = orphans.filter((p) => !p.inlinks.length).length;
   if (orphans.length || site.orphanCount)
-    out.push(issue('crawl-index', 'orphans', 'medium', `${Math.max(orphans.length, site.orphanCount)} URL trong sitemap không có link nội bộ nào trỏ tới (trang mồ côi)`, { why: 'Trang mồ côi không nhận PageRank nội bộ và bị coi là kém quan trọng khi chọn trang để crawl/index.', fix: 'Thêm link nội bộ từ trang liên quan/danh mục, hoặc loại khỏi sitemap nếu không cần.', patents: ['US7509315B1', 'US6285999B1'], urls: orphans.map((p) => ({ url: p.url })) }));
+    out.push(issue('crawl-index', 'orphans', 'medium', `${orphans.length || site.orphanCount} URL trong sitemap không đi tới được từ trang chủ qua link nội bộ (trang mồ côi${zero ? `, ${zero} trang không có link nào` : ''})`, { why: 'Trang mồ côi không nhận PageRank nội bộ và bị coi là kém quan trọng khi chọn trang để crawl/index. Link chỉ đến từ các trang mồ côi khác không giúp được, vì chính các trang đó cũng không nhận PageRank.', fix: 'Thêm link nội bộ từ trang liên quan/danh mục, hoặc loại khỏi sitemap nếu không cần. Nếu trang danh mục dùng nút "Load more"/cuộn vô hạn bằng JS, thêm phân trang có link thật (/page/2/...) để bot đi tới được các bài cũ.', patents: ['US7509315B1', 'US6285999B1'], urls: orphans.sort((a, b) => a.inlinks.length - b.inlinks.length).map((p) => ({ url: p.url, note: p.inlinks.length ? `chỉ được link từ ${p.inlinks.length} trang mồ côi khác` : 'không có link nội bộ nào' })) }));
 
   const deep = html.filter((p) => p.depth !== null && p.depth > 3 && isIndexable(p));
   if (deep.length)

@@ -151,3 +151,36 @@ assert.match(faqPage.hidden[0], /Stuffed/);
 assert.equal(faqPage.mobileAlternate, null);
 assert.equal(extract(`<html><body><figure><figcaption style="font-size: 0.85em">${'A caption under an image in the article body text. '.repeat(2)}</figcaption></figure></body></html>`, 'https://ex.com/q').hidden.length, 0, 'small font is not hidden');
 console.log('PASS enosta report fixes: own backlinks, slash variants, FAQ toggles, mobile alternate');
+
+// link gap: platforms, job boards, data scrapers and the competitor's own sites are dropped; directories first;
+// domains linking to several competitors are listed together
+import { linkGap } from '../checks/linkgap.mjs';
+import { backlinkAudit } from '../checks/backlinks.mjs';
+const dom = (domain, as) => ({ domain, as, links: 1 });
+const lg = linkGap([
+  ['andersenlab.com', [dom('yahoo.com', 100), dom('indeed.com', 100), dom('andersenlab.de', 40), dom('rocketreach.co', 69), dom('clutch.co', 57), dom('forbes.com', 93), dom('mit.edu', 90), dom('someblog.net', 30), dom('tiny.xyz', 5), dom('goodfirms.co', 60)]],
+  ['scnsoft.com', [dom('clutch.co', 57), dom('forbes.com', 93), dom('wikipedia.org', 100)]],
+], new Set(['goodfirms.co']));
+const a = lg.gaps[0];
+assert.deepEqual(a.gap.map((x) => x.domain), ['clutch.co', 'forbes.com', 'mit.edu', 'someblog.net']);
+assert.deepEqual(a.gap.map((x) => x.kind), ['Danh bạ / đánh giá B2B', 'Báo chí / PR', 'Giáo dục / tổ chức', 'Blog / site khác']);
+assert.equal(a.excluded['nền tảng lớn / mạng xã hội / UGC'], 1);
+assert.equal(a.excluded['tuyển dụng / freelance'], 1);
+assert.equal(a.excluded['site vệ tinh của đối thủ'], 1);
+assert.equal(a.excluded['site dữ liệu doanh nghiệp tự sinh'], 1);
+assert.equal(a.excluded['AS/DR < 10'], 1);
+assert.deepEqual(lg.intersect.map((x) => [x.domain, x.competitors.length]), [['clutch.co', 2], ['forbes.com', 2]]);
+// wired through the backlink audit and rendered (report script still valid)
+const gapSite = { host: 'enosta.com', start: 'https://enosta.com/', pages: [], brand: ['Enosta'] };
+const gapIssues = await backlinkAudit([
+  { source: 'goodfirms.co', target: '', site: 'enosta.com', dr: null, links: 3 },
+  ...['clutch.co', 'forbes.com', 'yahoo.com'].map((s) => ({ source: s, target: '', site: 'andersenlab.com', dr: 60, links: 1 })),
+  ...['clutch.co', 'forbes.com'].map((s) => ({ source: s, target: '', site: 'scnsoft.com', dr: 60, links: 1 })),
+], gapSite, {});
+assert.ok(gapIssues.some((i) => i.id === 'bl-link-intersect' && i.urls.length === 2));
+const gapHtml = renderReport({
+  meta: { date: 'x', patentCount: 0, vault: '', version: 1, web: true }, site: { url: 'https://enosta.com/', host: 'enosta.com', crawled: 1, indexable: 1, sitemapCount: 0, brand: [] },
+  sources: [], ga4: null, backlinks: gapSite.backlinkReport, score: { overall: 80, groups: {} }, groups: {}, issues: [], patents: {}, pages: [], gsc: null, checklist: null, contentDecisions: [], runLog: [],
+});
+for (const m of gapHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
+console.log('PASS link gap: exclusions, kinds, intersect, report');

@@ -2,6 +2,7 @@
 // (code only, no AI), then sorts every domain into DISAVOW / REVIEW / RECHECK / KEEP with the reasons behind it,
 // and builds the disavow.txt draft. The verdict step is rule-based; an AI classifier (e.g. Jev) can replace
 // `ruleVerdict` later and receive the same signals.
+import { linkGap } from './linkgap.mjs';
 import { issue } from './common.mjs';
 import { pct } from '../lib/util.mjs';
 import { jevClassify } from '../lib/jev.mjs';
@@ -139,11 +140,7 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
 
   // link gap: domains linking to a competitor but not to us
   const ownSet = new Set(domains.map((d) => d.domain));
-  const gaps = competitors.map(([host, rs]) => {
-    const theirs = groupDomains(rs);
-    const gap = theirs.filter((d) => !ownSet.has(d.domain) && !SPAM_NAME.test(d.domain) && !STAT_SITE.test(d.domain)).sort((a, b) => (b.as ?? 0) - (a.as ?? 0));
-    return { host, total: theirs.length, gap: gap.slice(0, 300).map((d) => ({ domain: d.domain, as: d.as, links: d.links })) };
-  });
+  const { gaps, intersect } = linkGap(competitors.map(([host, rs]) => [host, groupDomains(rs)]), ownSet, { skip: (d) => SPAM_NAME.test(d) || STAT_SITE.test(d) });
 
   site.backlinkReport = {
     method: jevStats?.analysed ? 'jev' : 'rules', jev: jevStats, domains: domains.length, rows: mine.length, counts,
@@ -151,7 +148,7 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
     clusters: net.clusters.slice(0, 30), months: net.months, spikes: net.spikes,
     list: domains.slice(0, 3000).map((d) => ({ domain: d.domain, as: d.as, links: d.links, ip: d.ip, country: d.country, first: d.firstSeen, last: d.lastSeen, verdict: d.verdict, why: d.why, jev: !!d.jev })),
     disavowTxt: [`# ${site.host} · ${today.toISOString().slice(0, 10)} · ${disavow.length} domain đề xuất DISAVOW (${jevStats?.analysed ? `Jev ${jevStats.analysed} domain + quy tắc` : 'phân loại theo quy tắc'})`, '# RÀ SOÁT THỦ CÔNG TRƯỚC KHI UPLOAD lên Google Disavow Tool. Chỉ disavow khi có dấu hiệu link thao túng hoặc đã bị Manual Action.', ...disavow.map((d) => 'domain:' + d.domain)].join('\n'),
-    gaps,
+    gaps, intersect,
   };
 
   if (disavow.length)
@@ -189,10 +186,19 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
       why: 'Link sâu tới trang dịch vụ/bài viết giúp PageRank và ngữ cảnh anchor tới đúng trang cần xếp hạng.',
       fix: 'Khi xây link/PR, ưu tiên trỏ tới trang dịch vụ, bài chuyên môn, nghiên cứu.', patents: ['US7716225B1', 'US6285999B1'], metric: toHome, total: withTarget }));
 
-  for (const g of gaps.filter((x) => x.gap.length))
-    out.push(issue('links', 'bl-link-gap-' + g.host.replace(/[^a-z0-9]+/g, '-'), 'info', `Link gap: ${g.gap.length} domain link tới ${g.host} nhưng chưa link tới ${own}`, {
-      fix: 'Ưu tiên tiếp cận các domain AS/DR cao, cùng ngành trong danh sách (bài khách, PR, danh bạ ngành, đối tác).',
-      urls: g.gap.slice(0, 200).map((d) => ({ url: d.domain, note: `AS/DR ${d.as ?? '—'} · ${d.links} link` })) }));
+  const gapNote = (d) => `${d.kind} · AS/DR ${d.as ?? '—'}${d.competitors ? ' · link tới ' + d.competitors.join(', ') : d.shared > 1 ? ` · link tới ${d.shared} đối thủ` : ''}`;
+  const excludedText = (ex) => Object.entries(ex).map(([k, n]) => `${n} ${k}`).join(', ');
+  const gapFix = 'Làm theo thứ tự: (1) danh bạ / đánh giá B2B: tạo hoặc hoàn thiện hồ sơ, xin review khách hàng; (2) báo chí / PR: pitch câu chuyện, số liệu, chuyên gia; (3) giáo dục / tổ chức: hội thảo, tài trợ, nghiên cứu chung; (4) blog / site khác: xem từng site có cùng ngành không trước khi tiếp cận. Ưu tiên domain đã link tới nhiều đối thủ: họ đã có thói quen link tới công ty cùng ngành.';
+  if (intersect.length)
+    out.push(issue('links', 'bl-link-intersect', 'low', `Link gap chung: ${intersect.length} domain link tới ≥ 2 đối thủ nhưng chưa link tới ${own}`, {
+      why: 'Domain đã link tới nhiều công ty cùng ngành thường là danh bạ, báo chí hoặc cộng đồng của ngành, nên đây là nhóm dễ xin link nhất.',
+      fix: gapFix, patents: ['US6285999B1', 'US7716225B1'],
+      urls: intersect.slice(0, 200).map((d) => ({ url: d.domain, note: gapNote(d) })) }));
+  for (const g of gaps.filter((x) => x.kept))
+    out.push(issue('links', 'bl-link-gap-' + g.host.replace(/[^a-z0-9]+/g, '-'), 'info', `Link gap với ${g.host}: ${g.kept} domain có thể tiếp cận (${Object.entries(g.byKind).filter(([, n]) => n).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(', ')})`, {
+      why: `Đã loại ${excludedText(g.excluded) || '0 domain'} trong tổng ${g.total} domain link tới đối thủ, vì không xin link được bằng outreach hoặc giá trị thấp.`,
+      fix: gapFix,
+      urls: g.gap.slice(0, 200).map((d) => ({ url: d.domain, note: gapNote(d) })) }));
   return out;
 }
 const bare = (h) => String(h || '').replace(/^www\./, '').toLowerCase();

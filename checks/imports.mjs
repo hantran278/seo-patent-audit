@@ -117,7 +117,7 @@ export function trafficPagesBroken(site, { keywords = [], gsc = [], ga4 = [], sf
   // it is only counted. Problems: errors, noindex, canonical elsewhere, redirect chains, redirects to an error or to the homepage.
   const isHome = (u) => { try { return new URL(u).pathname === '/'; } catch { return false; } };
   const redirectState = (u, target, hops, finalStatus) => finalStatus && finalStatus !== 200 ? `redirect tới URL lỗi (${finalStatus})` : hops >= 2 ? `chuỗi ${hops} redirect` : target && isHome(target) && !isHome(u) ? 'redirect về trang chủ (soft 404)' : 'moved';
-  const crawlState = (p) => p.chain?.length ? redirectState(p.url, p.finalUrl, p.chain.length, p.status || 'lỗi') : p.status !== 200 ? `HTTP ${p.status || 'lỗi'}` : !isIndexable(p) ? (/noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác') : null;
+  const crawlState = (p) => p.chain?.length && p.error ? `redirect lỗi (${p.error})` : p.chain?.length ? redirectState(p.url, p.finalUrl, p.chain.length, p.status || 'lỗi') : p.status !== 200 ? `HTTP ${p.status || 'lỗi'}` : !isIndexable(p) ? (/noindex/i.test((p.robotsMeta || '') + (p.xRobots || '')) ? 'noindex' : 'canonical sang URL khác') : null;
   const sfState = (r) => r.status >= 300 && r.status < 400 ? redirectState(r.url, r.redirect, 1, null) : r.status && r.status !== 200 ? `HTTP ${r.status}` : r.indexable === false ? r.reason || 'Non-Indexable' : null;
   const index = (list, key) => { const m = new Map(); for (const x of list) if (!m.has(key(x.url))) m.set(key(x.url), x); return m; };
   const crawlExact = index(site.pages, exact), crawlNorm = index(site.pages, norm), sfExact = index(sf, exact), sfNorm = index(sf, norm);

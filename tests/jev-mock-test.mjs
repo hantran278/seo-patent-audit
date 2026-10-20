@@ -8,16 +8,21 @@ globalThis.fetch = async (url, opt = {}) => {
     if (bad) return new Response(JSON.stringify({ detail: 'Invalid API key' }), { status: 401 });
     const body = JSON.parse(opt.body);
     const s = JSON.parse(body.state);
-    const spammy = (s.authority_score ?? 50) < 6 || s.same_ip_subnet_domains >= 3;
-    const unsure = !spammy && (s.authority_score ?? 50) < 15;
+    // batched request: one entry per domain in s.domains, questions d<k>_<name>
+    const answers = {};
+    s.domains.forEach((d, k) => {
+      const spammy = (d.authority_score ?? 50) < 6 || d.same_ip_subnet_domains >= 3;
+      const unsure = !spammy && (d.authority_score ?? 50) < 15;
+      answers['d' + k + '_spam'] = { type: 'noul', noul: spammy ? 0.93 : 0.08 };
+      answers['d' + k + '_manipulative'] = { type: 'noul', noul: d.first_seen_in_spike_month ? 0.9 : 0.1 };
+      answers['d' + k + '_site_type'] = { type: 'choice', choice: spammy ? 'directory' : 'blog', confidence: 0.7, probabilities: {} };
+      answers['d' + k + '_relevance'] = { type: 'score', score: spammy ? 0 : 2, confidence: 0.8, probabilities: {} };
+      answers['d' + k + '_verdict'] = { type: 'choice', choice: spammy ? 'DISAVOW' : unsure ? 'REVIEW' : 'KEEP', confidence: unsure ? 0.3 : 0.85, probabilities: {} };
+    });
+    if (!Object.keys(body.questions).every((q) => q in answers)) throw new Error('unexpected question ' + Object.keys(body.questions).find((q) => !(q in answers)));
     await new Promise((r) => setTimeout(r, 20));
-    return new Response(JSON.stringify({ model: 'jev-1.13.0', answers: {
-      spam: { type: 'noul', noul: spammy ? 0.93 : 0.08 },
-      manipulative: { type: 'noul', noul: s.first_seen_in_spike_month ? 0.9 : 0.1 },
-      site_type: { type: 'choice', choice: spammy ? 'directory' : 'blog', confidence: 0.7, probabilities: {} },
-      relevance: { type: 'score', score: spammy ? 0 : 2, confidence: 0.8, probabilities: {} },
-      verdict: { type: 'choice', choice: spammy ? 'DISAVOW' : unsure ? 'REVIEW' : 'KEEP', confidence: unsure ? 0.3 : 0.85, probabilities: {} },
-    }, usage: { input_tokens: 880, output_tokens: 60 } }));
+    // ~ shared state once + ~200 tokens per domain
+    return new Response(JSON.stringify({ model: 'jev-1.13.0', answers, usage: { input_tokens: 500 + 200 * s.domains.length, output_tokens: 60 } }));
   }
   return realFetch(url, opt);
 };
@@ -36,8 +41,8 @@ console.log('   brand mirror:', B.list.find((d) => d.domain === 'toscrape-books-
 console.log('   report text:', r.html.includes('Nhãn do <b>Jev</b>'));
 
 calls = 0;
-r = await runAudit({ ...base, jev: { key: 'k', budget: 0.005, threshold: 0.8 }, log: (m) => /Jev/.test(m) && console.log(m) });
-console.log(`B) ngưỡng $0.005 → analysed ${r.data.backlinks.jev.analysed}/${r.data.backlinks.domains}, stoppedBy=${r.data.backlinks.jev.stoppedBy}`);
+r = await runAudit({ ...base, jev: { key: 'k', budget: 0.001, threshold: 0.8 }, log: (m) => /Jev/.test(m) && console.log(m) });
+console.log(`B) ngưỡng $0.001 → analysed ${r.data.backlinks.jev.analysed}/${r.data.backlinks.domains}, stoppedBy=${r.data.backlinks.jev.stoppedBy}`);
 
 calls = 0; bad = true;
 r = await runAudit({ ...base, jev: { key: 'wrong', budget: 1 }, log: (m) => /Jev/.test(m) && console.log(m) });

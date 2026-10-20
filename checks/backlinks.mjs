@@ -125,8 +125,8 @@ export async function backlinkAudit(rows, site, { sf = [], today = new Date(), j
   // optional AI pass (Jev): rule signals become part of the state; unanalysed domains keep the rule verdict
   let jevStats = null;
   if (jev?.key && domains.length) {
-    // ~1,000 input tokens per domain (5 questions) at $0.042 / 1M tokens, measured on a 14k-domain run
-    jev.log?.(`▶ Jev phân loại ${domains.length} referring domain của ${site.host} (ước tính ~$${(domains.length * 1000 * 0.042 / 1e6).toFixed(3)}, ngưỡng spam ${jev.threshold ?? 0.8}, dừng khi tới $${jev.budget ?? 1})…`);
+    // ~400 input tokens per domain when batched 10 per request (one domain per request measured ~1,000 on a real 14k-domain run)
+    jev.log?.(`▶ Jev phân loại ${domains.length} referring domain của ${site.host} (ước tính ~$${(domains.length * 400 * 0.042 / 1e6).toFixed(3)}, ngưỡng spam ${jev.threshold ?? 0.8}, dừng khi tới $${jev.budget ?? 1})…`);
     jevStats = await jevClassify(domains, { ...ctx, host: site.host, brand: site.brand || [], niche: jev.niche }, jev);
   }
   domains.sort((a, b) => VERDICTS.indexOf(a.verdict) - VERDICTS.indexOf(b.verdict) || b.score - a.score);

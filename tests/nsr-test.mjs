@@ -122,3 +122,11 @@ const imp = classifyFiles([
 ]);
 assert.deepEqual(imp.backlinks.map((r) => r.site || ''), ['andersenlab.com', 'enosta.com', '']);
 console.log('PASS backlink files: competitor site taken from the file name');
+// GSC Links "Top linking sites" export (Site · Linking pages · Target pages), English and Vietnamese UI
+const gscLinks = classifyFiles([
+  { name: 'https___enosta.com_-Top linking sites-2026-10-20.csv', header: ['Site', 'Linking pages', 'Target pages'], rows: [['krowdbase.com', '885', '1']] },
+  { name: 'gsc-lien-ket.csv', header: ['Trang web', 'Trang liên kết', 'Trang đích'], rows: [['goodfirms.co', '183', '1']] },
+]);
+assert.deepEqual(gscLinks.summary.map((s) => s.kind), ['backlinks', 'backlinks']);
+assert.deepEqual(gscLinks.backlinks.map((r) => [r.source, r.links, r.site || '']), [['krowdbase.com', 885, 'enosta.com'], ['goodfirms.co', 183, '']]);
+console.log('PASS GSC top linking sites export detected');

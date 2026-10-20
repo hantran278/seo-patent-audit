@@ -96,7 +96,7 @@ export default async function handler(req, res) {
       jev: (() => {
         const j = req.body?.jev || {};
         const key = String(j.key || process.env.JEV_API_KEY || '').trim();
-        return key ? { key, niche: String(j.niche || '').slice(0, 200), budget: Math.min(Math.max(Number(j.budget) || 1, 0.01), 20), threshold: Math.min(Math.max(Number(j.threshold) || 0.8, 0.5), 0.99) } : null;
+        return key ? { key, niche: String(j.niche || '').slice(0, 200), budget: Math.min(Math.max(Number(j.budget) || 0.3, 0.01), 5), threshold: Math.min(Math.max(Number(j.threshold) || 0.8, 0.5), 0.99) } : null;
       })(),
       backlinkRows: backlinksCsv ? parseCsvText(backlinksCsv) : [],
       files: Array.isArray(files) ? files.slice(0, 20) : [],
